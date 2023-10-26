@@ -1,0 +1,24 @@
+[package]
+name = "tcp_server"
+version = "0.0.1"
+edition = "2021"
+description = "A simple TCP server written in Rust"
+license = "MIT"
+authors = ["Yrrrrrf"]
+
+
+
+
+[[bin]]
+name = "main_server"
+path = "src/main_server.rs"
+
+
+[[bin]]
+name = "main_client"
+path = "src/main_client.rs"
+
+
+[dependencies]
+log = "0.*" # Logging (https://docs.rs/log/latest/log/)
+dev_utils = "0.*" # Utilities for development (https://docs.rs/dev_utils/latest/dev_utils/)
