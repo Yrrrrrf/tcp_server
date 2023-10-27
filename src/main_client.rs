@@ -22,29 +22,94 @@ use config::*;
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
 fn main() {
-    dev_utils::print_app_data();
+    print_app_data();
     rlog::RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Actual code: --------------------------------------------------------------------------------------------------------
 
-    // Create a TCP stream and connect to the server
-    let mut stream = TcpStream::connect(format!("{}:{}", config::SERVER_IP, config::SERVER_PORT))
-        .expect("Failed to connect to server.");
+    let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
+    println!("Server address: {}", server_address);
 
-    // Send a message to the server
-    let message = "Hello, Rust!";
-    let message = "0000000000";
-    stream.write_all(message.as_bytes()).expect("Failed to send data.");
+    match TcpStream::connect(server_address) {
+        Ok(mut stream) => {
+            let message = "Hello, Rust!";
+            stream.write(message.as_bytes()).unwrap();
 
-    // Receive and print the connection confirmation from the server
-    // let mut confirmation = String::new();
-    // stream.read_to_string(&mut confirmation).expect("Failed to read confirmation");
-    // println!("Confirmation from server: {}", confirmation);
+            let mut buffer = [0; 1024];
+            let bytes = stream.read(&mut buffer).unwrap();
+            let response = String::from_utf8_lossy(&buffer[0..bytes]);
+            println!("Received: {}", response);
+        },
+        Err(e) => {
+            eprintln!("Failed to connect: {}", e);
+        }
+    }
 
-    // Sleep for 10 seconds
 
-    // let mut response = String::new();
-    // stream.read_to_string(&mut response).expect("Failed to read response from server.");
-    // println!("Received from server: {}", response);
+}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pub fn print_app_data() {
+    // Imports for reading the Cargo.toml file
+    use std::fs;
+    use std::io::{self, BufRead};
+    use std::path::Path;
+
+    let mut name = String::new();
+    let mut version = String::new();
+    let mut authors = String::new();
+
+    print!("{}[2J{}[1;1H", 27 as char, 27 as char);  // Clear the terminal
+    match fs::File::open(&Path::new("Cargo.toml")) {
+        Ok(file) => {
+            let mut lines = io::BufReader::new(file).lines().peekable();
+            while let Some(Ok(line)) = lines.next() {  // While there are still lines to read
+                if line.starts_with("[package]") {  // If the line starts with "[package]"
+                    while let Some(Ok(line)) = lines.next() {
+                        match line {
+                            _ if line.starts_with("name =") => name = terminal::set_fg(&line.split('=').nth(1).unwrap().trim().replace("\"", "").to_uppercase(), 'g'),
+                            _ if line.starts_with("version =") => version = terminal::set_fg(&format!("V{}", line.split('=').nth(1).unwrap().trim().replace("\"", "")), 'b'),
+                            _ if line.starts_with("authors =") => authors = line.split('=').nth(1).unwrap().trim().replace("[\"", "").replace("\"]", ""),
+                            _ if line.starts_with("[") => break,  // Stop when the next section starts
+                            _ => (),  // Else do nothing
+                        }
+                    }
+                    break;
+                }
+            }
+            println!("{} {}\nAuthors: {}\n", name, version, authors);
+        }
+        Err(e) => eprintln!("Failed to open 'Cargo.toml': {}", e),
+    };
 }

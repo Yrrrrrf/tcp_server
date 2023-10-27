@@ -7,12 +7,9 @@ license = "MIT"
 authors = ["Yrrrrrf"]
 
 
-
-
 [[bin]]
 name = "main_server"
 path = "src/main_server.rs"
-
 
 [[bin]]
 name = "main_client"
