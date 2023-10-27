@@ -30,17 +30,31 @@ fn main() {
     rlog::RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Actual code: --------------------------------------------------------------------------------------------------------
-
+    log::info!("Starting server...");
     let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
     println!("Server address: {}", server_address);
 
     let listener = TcpListener::bind(server_address)  // Listen on this address
         .expect("Failed to bind to address.");  // If it fails, print this message
 
+    let mut request_count = 0;
+
     // Iterate over the incoming connections
     listener.incoming().for_each(|stream| {
         match stream {
-            Ok(stream) => {thread::spawn(|| {handle_client(stream);});}
+            Ok(stream) => {
+                match request_count {
+                    0..=4 => {
+                        thread::spawn(|| {handle_client(stream);});
+                        request_count += 1;
+                    },
+                    _ => {
+                        stream.shutdown(std::net::Shutdown::Both).unwrap();
+                        log::warn!("Connection closed.")
+                    },
+                }
+
+            }
             Err(e) => eprintln!("Error: {}", e),
         }
     });
@@ -49,25 +63,27 @@ fn main() {
 
 
 fn handle_client(mut stream: TcpStream) {
-    println!("\nNew connection: {:?}", stream.peer_addr().unwrap());
-    let mut buffer = [0; 1024];  // 1 KB buffer (1024 bytes)
+    log::trace!("New connection: {:?}", stream.peer_addr().unwrap());
     // * Buffer reads the data from the stream and stores it in the buffer
+    let mut buffer = [0; 1024];  // 1 KB buffer (1024 bytes)
+    // let mut buffer = [0; 32768];  // 32 KB buffer (32768 bytes)
+    // let mut buffer = [0; 131072];  // 128 KB buffer (131072 bytes)
 
     match stream.read(&mut buffer) {
         Ok(size) => {
             match size {
-                0 => println!("Client disconnected."),
-                // 10 => println!("Received 10 bytes."),
+                0 => log::info!("Received 0 bytes. Connection closed."),
                 _ => {
                     let message = String::from_utf8_lossy(&buffer[..size]);
-                    println!("Received message from client: {}", message);
+                    // println!("Received message from client: {}", message);
+                    log::info!("Received message: {}", message);
 
-                    let reversed_message = message.chars().rev().collect::<String>();
-                    stream.write_all(reversed_message.as_bytes()).unwrap();
+                    // Return the revers message
+                    stream.write_all(message.chars().rev().collect::<String>().as_bytes()).unwrap();
                 }
             }
         }
-        Err(e) => println!("Failed to read from clieht: {}", e)
+        Err(e) => log::error!("Failed to read from connection: {}", e)
     }
 
 }

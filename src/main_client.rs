@@ -26,15 +26,19 @@ fn main() {
     rlog::RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Actual code: --------------------------------------------------------------------------------------------------------
-
+    log::info!("Starting client...");
     let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
     println!("Server address: {}", server_address);
 
     match TcpStream::connect(server_address) {
         Ok(mut stream) => {
+            // empty string
+            // let message = "\n";
             let message = "Hello, Rust!";
+            let message = "0123456789";
             stream.write(message.as_bytes()).unwrap();
 
+            let mut buffer = [0; 0];
             let mut buffer = [0; 1024];
             let bytes = stream.read(&mut buffer).unwrap();
             let response = String::from_utf8_lossy(&buffer[0..bytes]);
