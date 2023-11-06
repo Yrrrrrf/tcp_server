@@ -13,9 +13,9 @@ The main purpose of this project is to learn how to create a TCP server in Rust 
 - Set an IP address on the [`src/main_client.rs`](./src/main_client.rs) & [`src/main_server.rs`](./src/main_server.rs) files to connect to the server.
 - Use `cargo build` to build the project.
 - Use `cargo run` to run the project. 
-```rust
-cargo run -p tcp_server  // Initialize the server on the specified IP address and port
-cargo run -p tcp_client  // Test the connection with the client
+```bash
+cargo run -p tcp_server  # Initialize the server on the specified IP address and port
+cargo run -p tcp_client  # Test the connection with the client
 ```
 
 ## Features
