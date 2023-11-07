@@ -15,5 +15,7 @@ Cargo.lock
 .vscode/
 
 # project specific files
-resources/keys/
 # *.gif
+
+# Personal access tokens (keep these secret)
+keys.md
