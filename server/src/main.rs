@@ -4,7 +4,6 @@
 //! 
 //! Handles multiple connections using threads.
 //! 
-#![allow(dead_code)]
 #![allow(unused)]
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
@@ -20,6 +19,7 @@ use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
 // Own modules
+pub mod http;  // * Import the 'http' module from the 'src' directory.
 // mod config;
 // use config::*;
 

@@ -1,12 +1,8 @@
-//! This module contains the configuration of the server.
+//! This file contains the HTTP status enum and associated methods.
+//! 
+//! # HTTP Status Codes
 //! 
 //! ![Server](https://www.tutorialspoint.com/http/http_requests.htm)
-//! ![HTTP Status Codes](.\\resources\\http_status_codes.png)
-/// The IP address of the server.
-pub const SERVER_IP: &str = "127.0.0.1";
-/// The port that the server listens on.
-pub const SERVER_PORT: &str = "8080";
-
 
 /// Define a macro called 'impl_http_status_enum' that takes two arguments:
 /// 1. $enum_name: the name of an enum type, and
@@ -68,7 +64,28 @@ macro_rules! impl_http_status_enum {
 // each containing the variant name ($variant), the numerical value ($value), and a message ($message).
 macro_rules! http_status_enum {
     ($($variant:ident => ($value:expr, $message:expr)),* $(,)?) => {
-        // Define an enum called 'HttpStatus' with associated attributes for debugging, comparisons, and cloning.
+        /// Represents a set of HTTP status codes and their associated messages.
+        ///
+        /// This enum allows you to work with standard HTTP status codes and their corresponding
+        /// messages. It provides methods to retrieve the numerical code, the associated message,
+        /// and convert a numerical value into the appropriate status code variant.
+        ///
+        /// # Example
+        ///
+        /// ```
+        /// pub mod http;
+        /// use http::HttpStatus;
+        ///
+        /// let status = HttpStatus::_200;
+        /// assert_eq!(status.code(), 200);
+        /// assert_eq!(status.message(), "OK");
+        ///
+        /// let value = 404;
+        /// match HttpStatus::from_u16(value) {
+        ///     Some(status) => println!("HTTP Status from u16: {:?}", status),
+        ///     None => println!("Invalid HTTP Status Code"),
+        /// }
+        /// ```
         #[derive(
             Debug,  // Allow writting the enum to the console. (e.g. println!("{:?}", HttpStatus::_200))
             PartialEq,  // Allow the comparison of enum variants using the '==' operator.
@@ -94,6 +111,11 @@ http_status_enum!(
 
     // * 2XX: Success - The action was successfully received, understood, and accepted
     _200 => (200, "OK"),
+    _201 => (201, "Created"),
+    _202 => (202, "Accepted"),
+    _203 => (203, "Non-Authoritative Information"),
+    _204 => (204, "No Content"),
+    _205 => (205, "Reset Content"),
 
     // * 3XX: Redirection - Further action must be taken in order to complete the request
     _300 => (300, "Multiple Choices"),
@@ -101,25 +123,75 @@ http_status_enum!(
     _302 => (302, "Found"),
 
     // * 4XX: Client Error - The request contains bad syntax or cannot be fulfilled
+    _400 => (400, "Bad Request"),
+    _401 => (401, "Unauthorized"),
+    // _402 => (402, "Payment Required"),
+    _403 => (403, "Forbidden"),
     _404 => (404, "Not Found"),
     _405 => (405, "Method Not Allowed"),
+    _406 => (406, "Not Acceptable"),
+    _408 => (408, "Request Timeout"),
+    _409 => (409, "Conflict"),
+    _410 => (410, "Gone"),
 
     // * 5XX: Server Error - The server failed to fulfill an apparently valid request
     _500 => (500, "Internal Server Error"),
     _501 => (501, "Not Implemented"),
+    _502 => (502, "Bad Gateway"),
+    _503 => (503, "Service Unavailable"),
+    _504 => (504, "Gateway Timeout"),
+    // _505 => (505, "HTTP Version Not Supported"),
+    // _506 => (506, "Variant Also Negotiates"),
+    _507 => (507, "Insufficient Storage"),
+    // _508 => (508, "Loop Detected"),
+    // _510 => (510, "Not Extended"),
+    _511 => (511, "Network Authentication Required"),
     _599 => (599, "Network Connect Timeout Error"),
 );
 
 impl HttpStatus {
+    /// Returns the enum variant associated with the given [u16] value.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `value` - The [u16] value to match against the enum variants.
+    /// 
+    /// # Returns
+    /// 
+    /// - `Some(enum_variant)` - If the value matches one of the enum variants.
     pub fn new(value: u16) -> Option<Self> {
         Self::from_u16(value)
     }
 
+
+    /// Returns the HTTP status code as a [`String`] in the format: `HTTP/1.1 <code> <message>`.
+    /// 
+    /// # Returns
+    /// 
+    /// - [`String`] - The HTTP status code as a [`String`].
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// pub mod http;
+    /// use http::HttpStatus;
+    /// 
+    /// let status = HttpStatus::_200;
+    /// assert_eq!(status.get_as_response(), "HTTP/1.1 200 OK\r\n\r\n");
+    /// ```
     pub fn get_as_response(&self) -> String {
         format!("HTTP/1.1 {}\r\n\r\n", self.message())
     }
 }
 
+/// Returns the default HTTP status code.
+/// 
+/// The default HTTP status code is [`HttpStatus::_501`] (Not Implemented).
+/// This because could be used as a default response if the server is unable to handle the request.
+/// 
+/// # Returns
+/// 
+/// - [`HttpStatus`] - The default HTTP status code.
 impl Default for HttpStatus {
     fn default() -> Self {
         HttpStatus::_501  // Not Implemented

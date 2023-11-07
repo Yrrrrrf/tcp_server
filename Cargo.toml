@@ -1,31 +1,17 @@
 [workspace]
-members = [
-    "server",
-    "client",
-]
+members = ["server", "client"]
 
-
+# The resolver version is used to determine which version of the compiler to use
 resolver = "2"  # 2 is the latest version of the resolver
 
-
 # COMPILE OPTIMIZATION ------------------------------------------------------------------------
-# where 1 is the lowest and 3 is the highest level of optimization
+# where 0 is the lowest and 3 is the highest level of optimization
 
 [profile.dev]
 opt-level = 0  # no optimizations (fastest compile time, slowest runtime)
 
 [profile.release]
 opt-level = 3  # full optimizations (slowest compile time, fastest runtime)
-
-
-# [package]
-# name = "tcp_server"
-# version = "0.0.1"
-# edition = "2021"
-# description = "A simple TCP server written in Rust"
-# license = "MIT"
-# authors = ["Yrrrrrf"]
-
 
 # [[bin]]
 # name = "main_server"
