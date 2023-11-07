@@ -15,7 +15,9 @@ Cargo.lock
 .vscode/
 
 # project specific files
+tcp_socket_impl.md
 # *.gif
 
 # Personal access tokens (keep these secret)
 keys.md
+

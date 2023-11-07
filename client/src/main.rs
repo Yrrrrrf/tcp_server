@@ -16,8 +16,8 @@ use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
 // Own modules
-mod config;
-use config::*;
+// mod config;
+// use config::*;
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
 fn main() {
@@ -25,7 +25,8 @@ fn main() {
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Actual code: --------------------------------------------------------------------------------------------------------
-    let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
+    // let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
+    let server_address = "127.0.0.1:8080";
     log::info!("Starting client to {}\n", server_address);
 
     match TcpStream::connect(server_address) {

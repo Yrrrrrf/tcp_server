@@ -1,22 +1,36 @@
-[package]
-name = "tcp_server"
-version = "0.0.1"
-edition = "2021"
-description = "A simple TCP server written in Rust"
-license = "MIT"
-authors = ["Yrrrrrf"]
+[workspace]
+members = [
+    "server",
+    "client",
+]
 
 
-[[bin]]
-name = "main_server"
-path = "src/main_server.rs"
-
-[[bin]]
-name = "main_client"
-path = "src/main_client.rs"
+resolver = "2"  # 2 is the latest version of the resolver
 
 
-[dependencies]
-log = "0.*" # Logging (https://docs.rs/log/latest/log/)
-dev_utils = "0.0.*" # Utilities for development (https://docs.rs/dev_utils/latest/dev_utils/)
-# dev_utils = { path = "../dev_utils" }  # Use local version of dev_utils ( for development )
+# COMPILE OPTIMIZATION ------------------------------------------------------------------------
+# where 1 is the lowest and 3 is the highest level of optimization
+
+[profile.dev]
+opt-level = 0  # no optimizations (fastest compile time, slowest runtime)
+
+[profile.release]
+opt-level = 3  # full optimizations (slowest compile time, fastest runtime)
+
+
+# [package]
+# name = "tcp_server"
+# version = "0.0.1"
+# edition = "2021"
+# description = "A simple TCP server written in Rust"
+# license = "MIT"
+# authors = ["Yrrrrrf"]
+
+
+# [[bin]]
+# name = "main_server"
+# path = "src/main_server.rs"
+
+# [[bin]]
+# name = "main_client"
+# path = "src/main_client.rs"

@@ -20,8 +20,8 @@ use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
 // Own modules
-mod config;
-use config::*;
+// mod config;
+// use config::*;
 
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
@@ -32,7 +32,8 @@ fn main() {
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Actual code: --------------------------------------------------------------------------------------------------------
-    let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
+    // let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
+    let server_address = "127.0.0.1:8080";
     log::info!("Starting server at {}\n", server_address);
     let listener = TcpListener::bind(server_address)  // Listen on this address
         .expect("Failed to bind to address.");  // If it fails, print this message
@@ -96,7 +97,7 @@ fn handle_client(mut stream: TcpStream) {
             // let message = String::from_utf8_lossy(&buffer[..size]);
             // stream.write_all(message.chars().rev().collect::<String>().as_bytes()).unwrap();
 
-            let contents = std::fs::read_to_string("html\\200.html").unwrap();  
+            let contents = std::fs::read_to_string("resources\\html\\200.html").unwrap();  
             let response = "HTTP/1.1 200 OK\r\n\r\n".to_string() + &contents;
 
             stream.write(response.as_bytes()).unwrap();  // Write the 'response' as bytes to the client's connection.
