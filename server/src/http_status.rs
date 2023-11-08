@@ -1,8 +1,47 @@
-//! This file contains the HTTP status enum and associated methods.
-//! 
-//! # HTTP Status Codes
-//! 
-//! ![Server](https://www.tutorialspoint.com/http/http_requests.htm)
+//! This module defines an HTTP status code enum and associated macros to work with
+//! standard HTTP status codes. It allows you to retrieve the numerical code, the
+//! associated message, and convert a numerical value into the appropriate status code
+//! variant.
+//!
+//! The module includes the following features:
+//!
+//! - An enum `HttpStatus` representing standard HTTP status codes.
+//! - Macros for defining the `HttpStatus` enum and its methods.
+//! - Methods to retrieve the numerical code and associated message for each status code.
+//! - A method to convert a numerical value into the appropriate `HttpStatus` variant.
+//! - A default implementation for `HttpStatus` with the default status code (`HttpStatus::_501`).
+//! - A custom `Display` implementation for `HttpStatus` to format status codes with ANSI escape codes for coloring.
+//!
+// todo: check if this EXAMPLE works properly
+// todo: needed for a GOOD DOCUMENTATION
+//! # Example:
+//! ```rust
+//! use http::HttpStatus;
+//!
+//! let status = HttpStatus::_200;
+//! assert_eq!(status.code(), 200);
+//! assert_eq!(status.message(), "OK");
+//!
+//! let value = 404;
+//! match HttpStatus::from_u16(value) {
+//!     Some(status) => println!("HTTP Status from u16: {:?}", status),
+//!     None => println!("Invalid HTTP Status Code"),
+//! }
+//! ```
+//!
+//! The `HttpStatus` enum includes standard HTTP status codes from 1XX to 5XX, along with their associated messages.
+//!
+//! ANSI escape code colors are used to highlight the status code based on its type:
+//!
+//! - 1XX: Blue
+//! - 2XX: Green
+//! - 3XX: Magenta
+//! - 4XX: Yellow
+//! - 5XX: Red
+//!
+//! The default HTTP status code is `HttpStatus::_501` (Not Implemented), which can be used as a default response
+//! if the server is unable to handle a request.
+
 
 /// Define a macro called 'impl_http_status_enum' that takes two arguments:
 /// 1. $enum_name: the name of an enum type, and
@@ -92,8 +131,7 @@ macro_rules! http_status_enum {
             Clone  // Allow the cloning of enum variants.
         )]
         pub enum HttpStatus {
-            // List the enum variants ($variant).
-            $($variant,)*
+            $($variant,)*  // List the enum variants ($variant).
         }
 
         impl_http_status_enum!(HttpStatus; $($variant => ($value, $message)),*);
@@ -163,25 +201,6 @@ impl HttpStatus {
         Self::from_u16(value)
     }
 
-
-    /// Returns the HTTP status code as a [`String`] in the format: `HTTP/1.1 <code> <message>`.
-    /// 
-    /// # Returns
-    /// 
-    /// - [`String`] - The HTTP status code as a [`String`].
-    /// 
-    /// # Example
-    /// 
-    /// ```
-    /// pub mod http;
-    /// use http::HttpStatus;
-    /// 
-    /// let status = HttpStatus::_200;
-    /// assert_eq!(status.get_as_response(), "HTTP/1.1 200 OK\r\n\r\n");
-    /// ```
-    pub fn get_as_response(&self) -> String {
-        format!("HTTP/1.1 {}\r\n\r\n", self.message())
-    }
 }
 
 /// Returns the default HTTP status code.
@@ -198,8 +217,40 @@ impl Default for HttpStatus {
     }
 }
 
+/// Impl of the [`std::fmt::Display`] trait for the [`HttpStatus`] enum.
+/// 
+/// This allows the enum to be printed to the console using the [`println!`] macro.
+/// 
+/// Returns the HTTP status code as a [`String`] in the format: `<code> <message>`.
+/// 
+/// The string use the ANSI escape codes to color the code based on the status code type.
+/// # Colors:
+/// - 1XX: Blue
+/// - 2XX: Green
+/// - 3XX: Magenta
+/// - 4XX: Yellow
+/// - 5XX: Red
 impl std::fmt::Display for HttpStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.message())
+        // write!(f, "{} {}", self.code(), self.message())
+        write!(f, "{} {}", 
+            format!("{}{}\x1b[0m", match self.code() {
+                100..=199 => "\x1b[34m",  // Blue
+                200..=299 => "\x1b[32m",  // Green
+                300..=399 => "\x1b[35m",  // Magenta
+                400..=499 => "\x1b[33m",  // Yellow
+                _         => "\x1b[31m",  // Red
+                // Else will never be reached because the code is always between 100..=599.
+            }, &self.code()), self.message())
     }
 }
+
+
+// Write the sum fn that recives any number of arguments and returns the sum of them.
+// pub fn sum<T: std::ops::Add<Output = T> + Copy>(args: &[T]) -> T {
+//     let mut sum = args[0];
+//     for arg in args.iter().skip(1) {
+//         sum = sum + *arg;
+//     }
+//     sum
+// }

@@ -5,6 +5,8 @@
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
+pub mod http_methods;
+
 // Standard library imports
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -34,8 +36,7 @@ fn main() {
             // empty string
             // let message = "\n";
             let message = b"Hello, Rust!";
-            let message = b"0123456789";
-            let message = b"GET / HTTP/1.1\r\nHost: www.rust-lang.org\r\n\r\n";
+            // let message = b"GET / HTTP/1.1\r\nHost: www.rust-lang.org\r\n\r\n";
             // let message = "close";
             stream.write(message).unwrap();
             // stream.write(message.as_bytes()).unwrap();  // Write the message to the stream (same as b"&str")

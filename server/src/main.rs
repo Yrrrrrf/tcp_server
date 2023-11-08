@@ -19,7 +19,8 @@ use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
 // Own modules
-pub mod http;  // * Import the 'http' module from the 'src' directory.
+pub mod http_status;
+pub mod http_response;
 // mod config;
 // use config::*;
 
@@ -103,11 +104,9 @@ fn handle_client(mut stream: TcpStream) {
             stream.write(response.as_bytes()).unwrap();  // Write the 'response' as bytes to the client's connection.
             stream.flush().unwrap();  // Flush the stream to ensure data is sent to the client.
 
-
         }
         Err(e) => log::error!("Failed to read from connection: {}", e),
     }
-
 
     // Read the HTTP request from the client and store it in 'request'.
     // let mut request = String::new();
