@@ -20,7 +20,9 @@ use dev_utils::print_app_data;
 
 // Own modules
 pub mod http_status;
+use http_status::*;
 pub mod http_response;
+use http_response::*;
 // mod config;
 // use config::*;
 
@@ -72,7 +74,6 @@ fn handle_client(mut stream: TcpStream) {
         Ok(size) => {  // If the read was successful
             // log::info!("Received message ({}B):\n{} ", size, String::from_utf8_lossy(&buffer[..size]));
 
-
             if buffer.starts_with(b"GET / HTTP/1.1") {
                 log::info!("Received HTTP request ({}B):\n{} ", size, String::from_utf8_lossy(&buffer[..size]));
             } else {
@@ -99,7 +100,13 @@ fn handle_client(mut stream: TcpStream) {
             // stream.write_all(message.chars().rev().collect::<String>().as_bytes()).unwrap();
 
             let contents = std::fs::read_to_string("resources\\html\\200.html").unwrap();  
-            let response = "HTTP/1.1 200 OK\r\n\r\n".to_string() + &contents;
+            // let response = "HTTP/1.1 200 OK\r\n\r\n".to_string() + &contents;
+
+            let response = HttpResponse::new(
+                http_status::HttpStatus::_200,
+                http_response::HttpVersion::Http1_1,
+                contents,
+            ).to_string();
 
             stream.write(response.as_bytes()).unwrap();  // Write the 'response' as bytes to the client's connection.
             stream.flush().unwrap();  // Flush the stream to ensure data is sent to the client.

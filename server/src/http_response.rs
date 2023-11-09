@@ -1,9 +1,5 @@
 //! This file contains the struct for a HTTP response.
 //! 
-//! # HTTP Response
-//! 
-//! ![Server](https://www.tutorialspoint.com/http/http_responses.htm)
-//! 
 //! # Example
 //! ```
 //! HTTP/1.1 200 OK
@@ -14,8 +10,10 @@
 //! Content-Type: text/html
 //! Connection: Closed
 //! ```
+use std::{fmt::Display, time::{SystemTime, UNIX_EPOCH}};
+
 use crate::http_status::HttpStatus;
-use dev_utils::conversion::datetime;
+use dev_utils::conversion::datetime::{self, calculate_hour_minute_second, calculate_year_month_day};
 
 
 // ? Structs ------------------------------------------------------------------------------------------------------------------
@@ -24,28 +22,86 @@ use dev_utils::conversion::datetime;
     Debug,
     Clone,
 )]
-pub struct Response {
+pub struct HttpResponse {
     pub status: HttpStatus,
-    pub headers: Vec<String>,
+    pub http_version: HttpVersion,
+    // todo: Add the headers to the response
+    // pub headers: Vec<String>,
     pub body: String,
 }
 
-impl Response {
-    pub fn new(status: HttpStatus, headers: Vec<String>, body: String) -> Response {
-        Response {status, headers, body}
+impl HttpResponse {
+    // pub fn new(status: HttpStatus, http_version: HttpVersion, headers: Vec<String>, body: String) -> HttpResponse {
+        // HttpResponse {status, http_version, headers, body}
+    pub fn new(status: HttpStatus, http_version: HttpVersion, body: String) -> HttpResponse {
+        HttpResponse {status, http_version, body}
     }
+
+
+    // pub fn new_1_1(status: HttpStatus, headers: Vec<String>, body: String) -> HttpResponse {
+    //     HttpResponse {status, http_version: HttpVersion::Http1_1, headers, body}
+    pub fn new_1_1(status: HttpStatus, body: String) -> HttpResponse {
+        HttpResponse {status, http_version: HttpVersion::Http1_1, body}
+    }
+
+
+    pub fn now_hour_minute_second() -> String {
+        let mut timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u64;
+        timestamp -= 6 * 3600;  // remove 6 hours from the timestamp
+        let (days, hours, minutes, seconds) = calculate_hour_minute_second(timestamp);
+        let (years, months, days) = calculate_year_month_day(days);
+
+        // Console out: 2021-08-01 16:00:00
+        format!("{:4}-{:0>2}-{:0>2} {:0>2}:{:0>2}:{:0>2}", years, months, days, hours, minutes, seconds)
+        // todo: Change the console out to Mon, 27 Jul 2009 12:28:53 GMT (RFC 1123)
+        /*
+        format!(
+            "{:0>2} {:0>2} {:0>2} {:0>2} {:0>2} {:0>2}",
+             years, months, days, hours, minutes, seconds
+        )
+        */
+    }
+
 
     pub fn to_string(&self) -> String {
-        let mut response = String::new();
-        response.push_str(&format!("HTTP/1.1 {} {}\r\n", self.status.code(), self.status.message()));
-        // response.push_str(&format!("Date: {}\r\n", datetime::now()));
-        response.push_str(&format!("Server: {}\r\n", "Rust Server"));
-        response.push_str(&format!("Content-Length: {}\r\n", self.body.len()));
-        response.push_str(&format!("Content-Type: {}\r\n", "text/html"));
-        response.push_str(&format!("Connection: {}\r\n", "Closed"));
-        response.push_str("\r\n");
-        response.push_str(&self.body);
-        response
+        format!("{} {} {}\r\nDate: {}\r\nServer: {}\r\nContent-Length: {}\r\nContent-Type: {}\r\nConnection: {}\r\n\r\n{}", 
+            self.http_version, self.status.code(), self.status.message(), // HTTP/1.1 200 OK
+            Self::now_hour_minute_second(),  // Date: Mon, 27 Jul 2009 12:28:53 GMT
+            "Rust Server",  // Server: Apache/2.2.14 (Win32)
+            self.body.len(),  // Content-Length: 88
+            "text/html",  // Content-Type: text/html
+            "Closed",  // Represents the connection type
+            self.body
+        )
     }
 
+}
+
+
+#[derive(
+    Debug,
+    Clone,
+    Default,
+)]
+pub enum HttpVersion {
+    Http1_0,
+    // Add the comment to make Http1_1 the default
+    #[default]
+    Http1_1,
+    Http2_0,
+}
+
+// impl HttpVersion {
+// }
+
+
+impl Display for HttpVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let version = match self {
+            HttpVersion::Http1_0 => String::from("HTTP/1.0"),
+            HttpVersion::Http1_1 => String::from("HTTP/1.1"),
+            HttpVersion::Http2_0 => String::from("HTTP/2.0"),
+        };
+        write!(f, "{}", version)
+    }
 }

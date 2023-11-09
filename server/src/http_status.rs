@@ -234,14 +234,16 @@ impl std::fmt::Display for HttpStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         // write!(f, "{} {}", self.code(), self.message())
         write!(f, "{} {}", 
-            format!("{}{}\x1b[0m", match self.code() {
-                100..=199 => "\x1b[34m",  // Blue
-                200..=299 => "\x1b[32m",  // Green
-                300..=399 => "\x1b[35m",  // Magenta
-                400..=499 => "\x1b[33m",  // Yellow
-                _         => "\x1b[31m",  // Red
-                // Else will never be reached because the code is always between 100..=599.
-            }, &self.code()), self.message())
+            format!("\x1b[{}m{}\x1b[0m", 
+                match self.code() {
+                    100..=199 => "34",  // Blue
+                    200..=299 => "32",  // Green
+                    300..=399 => "35",  // Magenta
+                    400..=499 => "33",  // Yellow
+                    500..=599 => "31",  // Red
+                    _ => "0",  // Default (Theoricaly, this should never happen)
+                }, &self.code()), 
+            self.message())
     }
 }
 
