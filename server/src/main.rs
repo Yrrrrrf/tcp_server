@@ -72,14 +72,14 @@ fn handle_client(mut stream: TcpStream) {
 
     match stream.read(&mut buffer) {  // Read the data from the stream and store it in the buffer
         Ok(size) => {  // If the read was successful
-            // log::info!("Received message ({}B):\n{} ", size, String::from_utf8_lossy(&buffer[..size]));
-
-            if buffer.starts_with(b"GET / HTTP/1.1") {
-                log::info!("Received HTTP request ({}B):\n{} ", size, String::from_utf8_lossy(&buffer[..size]));
-            } else {
-                log::info!("Received message ({}B):\n{} ", size, String::from_utf8_lossy(&buffer[..size]));
-            }
-
+            log::info!("{} ({}B):\n{} ",
+                match buffer.starts_with(b"GET / HTTP/1.1") {
+                    true => "Received HTTP request",
+                    false => "Received message",
+                },
+                size,
+                String::from_utf8_lossy(&buffer[..size])
+            );
 
             // todo: Check if the match is necessary to close the connection
             // todo: Probably not, because the connection is closed when the client closes it
@@ -99,13 +99,10 @@ fn handle_client(mut stream: TcpStream) {
             // let message = String::from_utf8_lossy(&buffer[..size]);
             // stream.write_all(message.chars().rev().collect::<String>().as_bytes()).unwrap();
 
-            let contents = std::fs::read_to_string("resources\\html\\200.html").unwrap();  
-            // let response = "HTTP/1.1 200 OK\r\n\r\n".to_string() + &contents;
-
             let response = HttpResponse::new(
                 http_status::HttpStatus::_200,
                 http_response::HttpVersion::Http1_1,
-                contents,
+                std::fs::read_to_string("resources\\html\\200.html").unwrap()  // Contents of the file
             ).to_string();
 
             stream.write(response.as_bytes()).unwrap();  // Write the 'response' as bytes to the client's connection.

@@ -5,7 +5,6 @@
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
-pub mod http_methods;
 
 // Standard library imports
 use std::io::{Read, Write};
@@ -18,6 +17,9 @@ use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
 // Own modules
+pub mod http_methods;
+pub mod http_request;
+use http_request::*;
 // mod config;
 // use config::*;
 

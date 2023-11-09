@@ -16,12 +16,7 @@ use crate::http_status::HttpStatus;
 use dev_utils::conversion::datetime::{self, calculate_hour_minute_second, calculate_year_month_day};
 
 
-// ? Structs ------------------------------------------------------------------------------------------------------------------
-
-#[derive(
-    Debug,
-    Clone,
-)]
+#[derive(Debug, Clone)]
 pub struct HttpResponse {
     pub status: HttpStatus,
     pub http_version: HttpVersion,
@@ -46,6 +41,7 @@ impl HttpResponse {
 
 
     pub fn now_hour_minute_second() -> String {
+        // todo: Improve or create the now() fn in the datetime module (dev_utils)
         let mut timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u64;
         timestamp -= 6 * 3600;  // remove 6 hours from the timestamp
         let (days, hours, minutes, seconds) = calculate_hour_minute_second(timestamp);
@@ -97,11 +93,10 @@ pub enum HttpVersion {
 
 impl Display for HttpVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let version = match self {
-            HttpVersion::Http1_0 => String::from("HTTP/1.0"),
-            HttpVersion::Http1_1 => String::from("HTTP/1.1"),
-            HttpVersion::Http2_0 => String::from("HTTP/2.0"),
-        };
-        write!(f, "{}", version)
+        write!(f, "HTTP/{}", match self {
+            HttpVersion::Http1_0 => "1.0",
+            HttpVersion::Http1_1 => "1.1",
+            HttpVersion::Http2_0 => "2.0",
+        })
     }
 }

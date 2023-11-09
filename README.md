@@ -16,6 +16,8 @@ The main purpose of this project is to learn how to create a TCP server in Rust 
 ```bash
 cargo run -p server  # Initialize the server on the specified IP address and port
 cargo run -p client  # Test the connection with the client
+# The clien probably will become a separate project or an struct in the server project
+# Maybe this (all) will be abstracted in a module for dev_utils crate
 ```
 
 ## Features
@@ -38,5 +40,5 @@ cargo run -p client  # Test the connection with the client
 ## [License](./../LICENSE.md)
 This project is licensed under the terms of the [MIT License](LICENSE.md).
 
-## Credits
-[Server Icon (by Freepik)](https://www.flaticon.com/free-icon/server_3785989?term=server&page=1&position=36&origin=search&related_id=3785989)
+## Attributions
+This project uses an icon from [flaticon.com](https://www.flaticon.com/). The individual attributions are in the [attributions.md](./resources/img/attributions.md) file.
