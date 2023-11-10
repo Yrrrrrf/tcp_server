@@ -16,12 +16,7 @@ use log::{LevelFilter, warn, info, debug, trace, error};
 use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
-// Own modules
-pub mod http_methods;
-pub mod http_request;
-use http_request::*;
-
-use crate::http_methods::HttpMethod;
+use dev_utils::http::{*, request::HttpRequest};
 // mod config;
 // use config::*;
 
@@ -37,14 +32,14 @@ fn main() {
 
     match TcpStream::connect(server_address) {
         Ok(mut stream) => {
-            let request = Request::new_1_1(
+            let request = HttpRequest::new_1_1(
                 HttpMethod::POST, 
                 // "/index.html".to_string(), 
                 "/contact", 
                 // "/", 
                 "Hello, Rust!".to_string()
             );
-            println!("{}", request);
+            println!("{:?}", request);
             stream.write(request.to_string().as_bytes()).unwrap();
 
             let mut buffer = [0; 1024];

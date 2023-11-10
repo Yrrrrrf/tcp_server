@@ -19,13 +19,7 @@ use log::{LevelFilter, warn, info, debug, trace, error};
 use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
-// Own modules
-pub mod http_status;
-use http_status::*;
-pub mod http_response;
-use http_response::*;
-// mod config;
-// use config::*;
+use dev_utils::http::{*, request::HttpRequest, response::HttpResponse};
 
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
@@ -43,27 +37,12 @@ fn main() {
         .expect("Failed to bind to address.");  // If it fails, print this message
 
     let mut request_count = 0;
-    
-    // Create a thread pool with 8 threads
-    let pool = ThreadPool::new(8);
+    let pool = ThreadPool::new(8);  // Create a thread pool with 8 threads
 
     // Iterate over the incoming connections
     listener.incoming().for_each(|stream| {
-        match stream {
-            Ok(stream) => {
-                
-                // * Thread pool ---------------------------------------------------------------
-                pool.execute(|| {handle_client(stream);});
-                
-                // match request_count {
-                //     // 0..=4 => {
-                //     //     thread::spawn(|| {handle_client(stream);});
-                //     //     request_count += 1;
-                //     // },
-                //     _ => {thread::spawn(|| {handle_client(stream);});},
-                // }
-
-            }
+        match stream {  // Match the stream (connection)
+            Ok(stream) => pool.execute(|| handle_client(stream)),
             Err(e) => eprintln!("Error: {}", e),
         }
     });
@@ -89,6 +68,7 @@ fn handle_client(mut stream: TcpStream) {
             let request_line = String::from_utf8_lossy(&buffer[..size]).lines().next().unwrap().to_owned();
             println!("Request line: {}", request_line);
 
+            // * Impl a better way to parse the request line
             // ^ match the HTTP method
             match request_line.split_whitespace().next() {
                 Some(method) => match method {
@@ -132,8 +112,8 @@ fn handle_client(mut stream: TcpStream) {
             
             // * Manage Response --------------------------------------------------------------
             let response = HttpResponse::new(
-                http_status::HttpStatus::_200,
-                http_response::HttpVersion::Http1_1,
+                HttpStatus::_200,
+                HttpVersion::Http1_1,
                 std::fs::read_to_string("resources\\html\\200.html").unwrap()  // Contents of the file
             ).to_string();
 
@@ -171,6 +151,7 @@ fn close_connection(mut stream: TcpStream) {
 
 
 // ? Thread pool --------------------------------------------------------------------------------------------------------------
+
 /// A simple thread pool implementation.
 #[derive(Debug)]
 pub struct ThreadPool {
@@ -276,6 +257,7 @@ pub fn spawn<F, T>(f: F) -> thread::JoinHandle<T>
     Builder::new().spawn(f).expect("Failed to spawn thread.")
 }
 
+
 type Job = Box<dyn FnOnce() + Send + 'static>;
 // import the 'Job' struct
 
@@ -298,4 +280,8 @@ impl Worker {
     }
 }
 
+
+// todo: Impl a better way to parse the request line
+// todo: Understand at 100% the code above (mostly the ThreadPool struct & it's impl techniques)
+// todo: Impl Shoutdown and Cleanup behavior for the ThreadPool
 

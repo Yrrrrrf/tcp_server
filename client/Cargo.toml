@@ -6,5 +6,5 @@ authors = ["Yrrrrrf"]
 
 [dependencies]
 log = "0.*" # Logging (https://docs.rs/log/latest/log/)
-dev_utils = "0.0.*" # Utilities for development (https://docs.rs/dev_utils/latest/dev_utils/)
-# dev_utils = { path = "../dev_utils" }  # Use local version of dev_utils ( for development )
+# dev_utils = "0.0.*" # Utilities for development (https://docs.rs/dev_utils/latest/dev_utils/)
+dev_utils = { path = "./../../dev_utils" }  # Use local version of dev_utils ( for development )
