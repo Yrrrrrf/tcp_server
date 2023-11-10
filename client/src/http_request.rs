@@ -13,6 +13,8 @@
 //! Host: www.tutorialspoint.com
 //! Accept-Language: en-us
 //! ```
+use std::fmt::Display;
+
 use crate::http_methods::HttpMethod;
 
 
@@ -25,13 +27,20 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(method: HttpMethod, url: String, headers: Vec<String>, body: String) -> Request {
-        Request {method, url, headers, body}
+    pub fn new(method: HttpMethod, url: impl Into<String> + Display
+        , headers: Vec<String>, body: String) -> Request {
+        Request {method, url: url.to_string(), headers, body}
     }
 
-    pub fn new_1_1(method: HttpMethod, url: String, body: String) -> Request {
-        Request {method, url, headers: Vec::new(), body}
+    pub fn new_1_1(method: HttpMethod, url: impl Into<String> + Display, body: String) -> Request {
+        Request {
+            method, 
+            url: url.to_string(),
+            headers: Vec::new(), 
+            body
+        }
     }
+
 }
 
 impl std::fmt::Display for Request {

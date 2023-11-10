@@ -20,6 +20,8 @@ use dev_utils::print_app_data;
 pub mod http_methods;
 pub mod http_request;
 use http_request::*;
+
+use crate::http_methods::HttpMethod;
 // mod config;
 // use config::*;
 
@@ -35,20 +37,32 @@ fn main() {
 
     match TcpStream::connect(server_address) {
         Ok(mut stream) => {
-            // empty string
-            // let message = "\n";
             let message = b"Hello, Rust!";
-            // let message = b"GET / HTTP/1.1\r\nHost: www.rust-lang.org\r\n\r\n";
-            // let message = "close";
-            stream.write(message).unwrap();
-            // stream.write(message.as_bytes()).unwrap();  // Write the message to the stream (same as b"&str")
+
+            let request = Request::new_1_1(
+                HttpMethod::POST, 
+                // "/index.html".to_string(), 
+                "/", 
+                message.iter().map(|&x| x as char).collect::<String>(),
+            );
+            println!("{}", request);
+            
+            
+            stream.write(request.to_string().as_bytes()).unwrap();
+            // stream.write(request.body.as_bytes()).unwrap();
+
+
 
             let mut buffer = [0; 1024];
             let bytes = stream.read(&mut buffer).unwrap();
             let response = String::from_utf8_lossy(&buffer[0..bytes]);
-            println!("Response: {}", response);
+            // println!("Response: {}", response);
         },
         Err(e) => eprintln!("Failed to connect: {}", e),
     }
 
 }
+
+
+// Create the client struct. The client must send a request to the server and receive a response.
+// The client must be able to send a request with a body and receive a response with a body.

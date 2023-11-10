@@ -2,7 +2,7 @@
 //! 
 //! # Example
 //! ```
-//! HTTP/1.1 200 OK
+//! HTTP/1.1 / 200 OK
 //! Date: Mon, 27 Jul 2009 12:28:53 GMT
 //! Server: Apache/2.2.14 (Win32)
 //! Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
@@ -10,7 +10,8 @@
 //! Content-Type: text/html
 //! Connection: Closed
 //! ```
-use std::{fmt::Display, time::{SystemTime, UNIX_EPOCH}};
+use std::fmt::Display;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::http_status::HttpStatus;
 use dev_utils::conversion::datetime::{self, calculate_hour_minute_second, calculate_year_month_day};
@@ -40,6 +41,16 @@ impl HttpResponse {
     }
 
 
+    /// Returns the current date and time in the format: 2021-08-01 16:00:00
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// use http_response::HttpResponse;
+    /// 
+    /// let response = HttpResponse::new_1_1(HttpStatus::Ok, "Hello World!".to_string());
+    /// println!("{}", response.to_string());
+    /// ```
     pub fn now_hour_minute_second() -> String {
         // todo: Improve or create the now() fn in the datetime module (dev_utils)
         let mut timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u64;
@@ -49,7 +60,9 @@ impl HttpResponse {
 
         // Console out: 2021-08-01 16:00:00
         format!("{:4}-{:0>2}-{:0>2} {:0>2}:{:0>2}:{:0>2}", years, months, days, hours, minutes, seconds)
+
         // todo: Change the console out to Mon, 27 Jul 2009 12:28:53 GMT (RFC 1123)
+        // todo: Check https://learn.microsoft.com/en-us/dotnet/api/system.globalization.datetimeformatinfo.rfc1123pattern?view=net-7.0
         /*
         format!(
             "{:0>2} {:0>2} {:0>2} {:0>2} {:0>2} {:0>2}",
@@ -59,6 +72,24 @@ impl HttpResponse {
     }
 
 
+    /// Returns the HTTP response as a string.
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// use http_response::HttpResponse;
+    /// 
+    /// let response = HttpResponse::new_1_1(HttpStatus::Ok, "Hello World!".to_string());
+    /// println!("{}", response.to_string());
+    /// 
+    /// // HTTP/1.1 200 OK
+    /// // Date: Mon, 27 Jul 2009 12:28:53 GMT
+    /// // Server: Apache/2.2.14 (Win32)
+    /// // Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
+    /// // Content-Length: 88
+    /// // Content-Type: text/html
+    /// // Connection: Closed
+    /// ```
     pub fn to_string(&self) -> String {
         format!("{} {} {}\r\nDate: {}\r\nServer: {}\r\nContent-Length: {}\r\nContent-Type: {}\r\nConnection: {}\r\n\r\n{}", 
             self.http_version, self.status.code(), self.status.message(), // HTTP/1.1 200 OK
@@ -74,11 +105,7 @@ impl HttpResponse {
 }
 
 
-#[derive(
-    Debug,
-    Clone,
-    Default,
-)]
+#[derive(Debug, Clone, Default)]
 pub enum HttpVersion {
     Http1_0,
     // Add the comment to make Http1_1 the default
@@ -87,9 +114,15 @@ pub enum HttpVersion {
     Http2_0,
 }
 
-// impl HttpVersion {
-// }
-
+impl HttpVersion {
+    pub fn as_str(&self) -> &str {
+        match self {
+            HttpVersion::Http1_0 => "HTTP/1.0",
+            HttpVersion::Http1_1 => "HTTP/1.1",
+            HttpVersion::Http2_0 => "HTTP/2.0",
+        }
+    }
+}
 
 impl Display for HttpVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

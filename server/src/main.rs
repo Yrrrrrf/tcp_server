@@ -72,33 +72,87 @@ fn handle_client(mut stream: TcpStream) {
 
     match stream.read(&mut buffer) {  // Read the data from the stream and store it in the buffer
         Ok(size) => {  // If the read was successful
-            log::info!("{} ({}B):\n{} ",
-                match buffer.starts_with(b"GET / HTTP/1.1") {
-                    true => "Received HTTP request",
-                    false => "Received message",
-                },
-                size,
-                String::from_utf8_lossy(&buffer[..size])
-            );
+
+            // * Manage Request ---------------------------------------------------------------
+            // log::info!("({} Bytes):\n{} ", size, String::from_utf8_lossy(&buffer[..size]));
+
+
+            // get the first line of the request
+            let request_line = String::from_utf8_lossy(&buffer[..size]).lines().next().unwrap().to_owned();
+            println!("Request line: {}", request_line);
+
+            // match the HTTP method
+            let method = match request_line.split_whitespace().next() {
+                Some(method) => method,
+                None => {
+                    log::error!("Invalid request line: {}", request_line);
+                    return;
+                }
+            };
+
+            match method {
+                "GET" => log::info!("GET request"),
+                "POST" => log::info!("POST request"),
+                "PUT" => log::info!("PUT request"),
+                "DELETE" => log::info!("DELETE request"),
+                // "CONNECT" => log::info!("CONNECT request"),
+                _ => log::error!("Invalid method: {}", method)
+            }
+
+            // match the URL
+            let url = match request_line.split_whitespace().nth(1) {
+                Some(url) => url,
+                None => {
+                    log::error!("Invalid request line: {}", request_line);
+                    return;
+                }
+            };
+
+            match url {
+                "/" => log::info!("Home page"),
+                "/about" => log::info!("About page"),
+                "/contact" => log::info!("Contact page"),
+                _ => log::error!("Invalid URL: {}", url)
+            }
+
+            // match the HTTP version
+            let http_version = match request_line.split_whitespace().nth(2) {
+                Some(http_version) => http_version,
+                None => {
+                    log::error!("Invalid request line: {}", request_line);
+                    return;
+                }
+            };
+
+            match http_version {
+                // "HTTP/1.0" => log::info!("HTTP/1.0"),
+                "HTTP/1.1" => log::info!("HTTP/1.1"),
+                "HTTP/2.0" => log::info!("HTTP/2.0"),
+                _ => log::error!("Invalid HTTP version: {}", http_version)
+            }
+
+
+
 
             // todo: Check if the match is necessary to close the connection
             // todo: Probably not, because the connection is closed when the client closes it
             // todo: It should be only used when the server wants to close the connection? Or not?
-            match size {
-                5 => { if String::from_utf8_lossy(&buffer[..size]) == "close" {
-                        log::warn!("Closing connection.");
-                        stream.write_all("Closing connection.".as_bytes()).unwrap();  // send a message to the client
-                        stream.shutdown(std::net::Shutdown::Both).unwrap();  // close the connection (both ways)
-                        std::process::exit(0);  // finalize the program
-                    }}
-                _ => {},
-            }
+            // match size {
+            //     5 => { if String::from_utf8_lossy(&buffer[..size]) == "close" {
+            //             log::warn!("Closing connection.");
+            //             stream.write_all("Closing connection.".as_bytes()).unwrap();  // send a message to the client
+            //             stream.shutdown(std::net::Shutdown::Both).unwrap();  // close the connection (both ways)
+            //             std::process::exit(0);  // finalize the program
+            //         }}
+            //     _ => {},
+            // }
 
             // * Echo server (GENERATE THE RESPONSE TO THE CLIENT)
             // Create a message from the buffer and send it back to the client
             // let message = String::from_utf8_lossy(&buffer[..size]);
             // stream.write_all(message.chars().rev().collect::<String>().as_bytes()).unwrap();
 
+            // * Manage Response --------------------------------------------------------------
             let response = HttpResponse::new(
                 http_status::HttpStatus::_200,
                 http_response::HttpVersion::Http1_1,
