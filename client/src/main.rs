@@ -37,26 +37,20 @@ fn main() {
 
     match TcpStream::connect(server_address) {
         Ok(mut stream) => {
-            let message = b"Hello, Rust!";
-
             let request = Request::new_1_1(
                 HttpMethod::POST, 
                 // "/index.html".to_string(), 
-                "/", 
-                message.iter().map(|&x| x as char).collect::<String>(),
+                "/contact", 
+                // "/", 
+                "Hello, Rust!".to_string()
             );
             println!("{}", request);
-            
-            
             stream.write(request.to_string().as_bytes()).unwrap();
-            // stream.write(request.body.as_bytes()).unwrap();
-
-
 
             let mut buffer = [0; 1024];
             let bytes = stream.read(&mut buffer).unwrap();
             let response = String::from_utf8_lossy(&buffer[0..bytes]);
-            // println!("Response: {}", response);
+            println!("Response: {}", response);
         },
         Err(e) => eprintln!("Failed to connect: {}", e),
     }
