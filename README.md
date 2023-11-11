@@ -31,8 +31,8 @@ cargo run -p client  # Test the connection with the client
 - [ ] Testing
 
 ## References
-- [TCP Server](https://doc.rust-lang.org/std/net/struct.TcpListener.html)
-- [TCP Client](https://doc.rust-lang.org/std/net/struct.TcpStream.html)
+- [TCP Server (TCPListener)](https://doc.rust-lang.org/std/net/struct.TcpListener.html)
+- [TCP Client (TCPStream)](https://doc.rust-lang.org/std/net/struct.TcpStream.html)
 - [Single Threaded TCP Server](https://doc.rust-lang.org/stable/book/ch20-01-single-threaded.html)
 - [Multi Threaded TCP Server](https://doc.rust-lang.org/stable/book/ch20-02-multithreaded.html)
 

@@ -11,6 +11,7 @@
 // Standard library imports
 use std::io::{Read, Write};
 use std::net::{TcpStream, TcpListener};
+use std::path::Path;
 use std::sync::{mpsc, Mutex, Arc};
 use std::thread::{self, Builder};
 
@@ -29,6 +30,24 @@ fn main() {
     // RLog::init_logger(LevelFilter::Info);  // Initialize the logger with the given log level
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
+    log::trace!("This is a trace message.");
+ 
+    // todo: Impl a better abstraction to get the data from a *.toml file
+    // ^ The lines below are too verbose
+    // read the resources/keys/keys.toml file and print the data
+    let path = Path::new("resources/keys/keys.toml");
+    let keys = dev_utils::files::toml::TomlFile::new(path);
+    println!("{keys:?}");
+    // get section
+    let section = keys.get_section_data("ip_address");
+    println!("{:?}", section);
+    // get key
+    let ip = section.unwrap().get_key_value("ip");
+    let port = section.unwrap().get_key_value("port");
+    
+    println!("IP: {:?}", ip.unwrap());
+    println!("Port: {:?}", port.unwrap());
+
     // ^ Actual code: --------------------------------------------------------------------------------------------------------
     // let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
     let server_address = "127.0.0.1:8080";
@@ -36,10 +55,8 @@ fn main() {
     let listener = TcpListener::bind(server_address)  // Listen on this address
         .expect("Failed to bind to address.");  // If it fails, print this message
 
-    let mut request_count = 0;
     let pool = ThreadPool::new(8);  // Create a thread pool with 8 threads
-
-    // Iterate over the incoming connections
+    // // Iterate over the incoming connections
     listener.incoming().for_each(|stream| {
         match stream {  // Match the stream (connection)
             Ok(stream) => pool.execute(|| handle_client(stream)),
@@ -63,12 +80,16 @@ fn handle_client(mut stream: TcpStream) {
             // * Manage Request ---------------------------------------------------------------
             // log::info!("({} Bytes):\n{} ", size, String::from_utf8_lossy(&buffer[..size]));
 
-
             // get the first line of the request
             let request_line = String::from_utf8_lossy(&buffer[..size]).lines().next().unwrap().to_owned();
             println!("Request line: {}", request_line);
 
-            // * Impl a better way to parse the request line
+            // if request_line.starts_with("GET /favicon.ico") {
+            // // Ignore requests for the favicon.ico path.
+            // return;
+            // }
+
+            // todo: Impl a better way to parse the request line
             // ^ match the HTTP method
             match request_line.split_whitespace().next() {
                 Some(method) => match method {
@@ -85,6 +106,15 @@ fn handle_client(mut stream: TcpStream) {
             // ^ match the URL
             match request_line.split_whitespace().nth(1) {
                 Some(url) => match url {
+                    // todo: Handle the favicon request to avoid the repeated request
+                    // * The /favicon.ico request is recieved when the browser is opened
+                    // * This means that a browser will always send a request for the favicon
+                    // * even if the desired URL is not on the `/favicon.ico` path
+                    // 
+                    // * This because the browser will always try to load the favicon
+                    // * A Web Server should always return a favicon.ico file
+                    // * even if the browser doesn't request it
+                    "/favicon.ico" => log::warn!("Favicon requested. POSSIBLY IS A Repeated request?"),
                     "/" => log::info!("Home page"),
                     "/about" => log::info!("About page"),
                     "/contact" => log::info!("Contact page"),
