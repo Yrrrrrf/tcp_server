@@ -5,10 +5,10 @@
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
-
 // Standard library imports
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::path::Path;
 use std::thread;
 
 // External crates
@@ -17,28 +17,45 @@ use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
 use dev_utils::http::{*, request::HttpRequest};
-// mod config;
-// use config::*;
+
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
 fn main() {
     print_app_data(file!());  // Read the Cargo.toml file and print the app data (name, version, authors)
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
+    // ^ Read the IP address and port from the keys.toml file
+    let keys = dev_utils::files::toml::TomlFile::new(Path::new("resources/keys/keys.toml"));
+    let section = keys.get_section_data("ip_address");
+    let ip = section.unwrap().get_key_value("ip").unwrap();
+    let port = section.unwrap().get_key_value("port").unwrap();
+
     // ^ Actual code: --------------------------------------------------------------------------------------------------------
-    // let server_address = format!("{}:{}", config::SERVER_IP, config::SERVER_PORT);
-    let server_address = "127.0.0.1:8080";
+    let server_address = format!("{}:{}", ip.1, port.1);
     log::info!("Starting client to {}\n", server_address);
 
     match TcpStream::connect(server_address) {
         Ok(mut stream) => {
-            let request = HttpRequest::new_1_1(
-                HttpMethod::POST, 
-                // "/index.html".to_string(), 
-                "/contact", 
+            // let request = HttpRequest::new_1_1(
+            //     // HttpMethod::POST, 
+            //     HttpMethod::GET, 
+            //     // "/index.html".to_string(), 
+            //     "/contact", 
+            //     // "/", 
+            //     "Hello, Rust!".to_string()
+            // );
+
+            let request = HttpRequest::new(
+                // HttpMethod::GET, 
+                HttpMethod::DELETE, 
+                // HttpVersion::Http1_1,
+                HttpVersion::Http2_0,
+                "/index.html".to_string(), 
+                // "/contact", 
                 // "/", 
                 "Hello, Rust!".to_string()
             );
+
             println!("{:?}", request);
             stream.write(request.to_string().as_bytes()).unwrap();
 
