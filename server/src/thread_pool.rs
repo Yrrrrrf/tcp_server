@@ -2,11 +2,11 @@
 //! 
 //! # Examples
 //! mod thread_pool;
-
-
 use std::sync::{mpsc, Mutex, Arc};
 use std::thread::{self, Builder};
 
+
+type Job = Box<dyn FnOnce() + Send + 'static>;
 
 /// A simple thread pool implementation.
 #[derive(Debug)]
@@ -16,37 +16,19 @@ pub struct ThreadPool {
 }
 
 impl ThreadPool {
-    /// Creates a new ThreadPool with the specified size.
-    /// The ThreadPool will have `size` threads.
-    /// 
-    // / For now is limited to a u8 (max 255 threads).
-    // pub fn new(size: u8) -> ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
-        // let mut threads = Vec::with_capacity(size);
-
-        // ^ Return a Panic if the size is 0
         assert!(size > 0);  // The size must be greater than 0
-
         let (sender, receiver) = mpsc::channel();  // Create a channel to send jobs to the workers
-
         // Allow the receiver to be shared among multiple threads
         let receiver = Arc::new(Mutex::new(receiver));  // Create a mutex to share the receiver among the workers
-
         let mut workers = Vec::with_capacity(size.into());
-
-        for id in 0..size {
-            workers.push(Worker::new(id, Arc::clone(&receiver)));
-        }
-        // The line below is equivalent to the for loop above
-        // todo: Check if the for loop is better than the map
-        // let workers = (0..size).map(|id| Worker::new(id.into())).collect::<Vec<_>>();
-
-
+        (0..size).for_each(|id| workers.push(Worker::new(id, Arc::clone(&receiver))));
         ThreadPool {
             workers,
             sender,
         }
     }
+
 
     /// Executes the provided closure in a thread from the pool.
     ///
@@ -72,9 +54,7 @@ impl ThreadPool {
         // * 'static means that the closure does not reference anything on the stack (it can be moved to another thread)
     {
         let job = Box::new(f);
-
         self.sender.send(job).unwrap();
-        // The implementation of thread execution goes here.
     }
 }
 
@@ -114,9 +94,6 @@ pub fn spawn<F, T>(f: F) -> thread::JoinHandle<T>
 }
 
 
-type Job = Box<dyn FnOnce() + Send + 'static>;
-// import the 'Job' struct
-
 #[derive(Debug)]
 struct Worker {
     id: usize,
@@ -131,13 +108,10 @@ impl Worker {
                 job();
             }
         });
-
         Worker { id, thread }
     }
 }
 
-
 // todo: Impl a better way to parse the request line
 // todo: Understand at 100% the code above (mostly the ThreadPool struct & it's impl techniques)
 // todo: Impl Shoutdown and Cleanup behavior for the ThreadPool
-

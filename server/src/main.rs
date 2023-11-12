@@ -26,27 +26,26 @@
 //! - The server currently serves a default "200 OK" response for every request.
 //! - The server may exit after handling a specific number of requests (configured in the code).
 //! - Logging is configured with varying levels from `Trace` to `Info`.
-//!
-//! ## License
-//!
-//! This code is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 #![allow(unused)]
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
-use std::fmt::Display;
 // Standard library imports
+use std::fmt::Display;
 use std::io::{Read, Write};
 use std::net::{TcpStream, TcpListener};
 use std::path::Path;
 
 // External crates
 use log::LevelFilter;
-use dev_utils::log::rlog::RLog;
-use dev_utils::print_app_data;
+use dev_utils::{
+    print_app_data,
+    log::rlog::RLog,
+    files::toml::TomlFile,
+    http::{*, response::HttpResponse},
+};
 
-use dev_utils::http::{*, response::HttpResponse};
-
+// Internal modules
 mod thread_pool;
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
@@ -57,7 +56,7 @@ fn main() {
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Read the IP address and port from the keys.toml file
-    let keys = dev_utils::files::toml::TomlFile::new(Path::new("resources/keys/keys.toml"));
+    let keys = TomlFile::new(Path::new("resources/keys/keys.toml"));
     let section = keys.get_section_data("ip_address");
     let ip = section.unwrap().get_key_value("ip").unwrap();
     let port = section.unwrap().get_key_value("port").unwrap();
@@ -192,7 +191,6 @@ fn match_request_line(request_line: String) -> Option<HttpResponse> {
         log::debug!("Http version: {}", http_version.unwrap());
         return Some(handle_service(url.unwrap()));  // If the request line is valid, return the response
     }
-
 }
 
 
