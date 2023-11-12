@@ -3,16 +3,23 @@
 //! # Examples
 //! mod thread_pool;
 use std::sync::{mpsc, Mutex, Arc};
-use std::thread::{self, Builder};
+use std::thread;
 
 
+// Job is a type alias for a trait object that holds the type of closure that execute will receive.
+// It can be any type that implements the FnOnce trait.
 type Job = Box<dyn FnOnce() + Send + 'static>;
+
+enum Message {
+    NewJob(Job),
+    Terminate,
+}
 
 /// A simple thread pool implementation.
 #[derive(Debug)]
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>,
+    sender: mpsc::Sender<Message>,
 }
 
 impl ThreadPool {
@@ -21,7 +28,7 @@ impl ThreadPool {
         let (sender, receiver) = mpsc::channel();  // Create a channel to send jobs to the workers
         // Allow the receiver to be shared among multiple threads
         let receiver = Arc::new(Mutex::new(receiver));  // Create a mutex to share the receiver among the workers
-        let mut workers = Vec::with_capacity(size.into());
+        let mut workers = Vec::with_capacity(size);
         (0..size).for_each(|id| workers.push(Worker::new(id, Arc::clone(&receiver))));
         ThreadPool {
             workers,
@@ -49,69 +56,55 @@ impl ThreadPool {
     pub fn execute<F>(&self, f: F)  // execute a closure in a separate thread
     where
         F: FnOnce() + Send + 'static
-        // * FnOnce() is a closure that takes no arguments and returns nothing
-        // * Send means that the closure can be sent from one thread to another
-        // * 'static means that the closure does not reference anything on the stack (it can be moved to another thread)
     {
         let job = Box::new(f);
-        self.sender.send(job).unwrap();
+        self.sender.send(Message::NewJob(job)).unwrap();
     }
 }
 
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
 
-/// Spawns a new thread and returns a JoinHandle for it.
-/// 
-/// A JoinHandle is an owned value that, when we call the join method on it, will wait for its thread to finish.
-/// 
-/// # Arguments
-///
-/// * `f` - A closure representing the code to be executed in the spawned thread.
-///
-/// # Returns
-///
-/// A `JoinHandle<T>` where T is the type returned by the closure.
-///
-/// # Examples
-///
-/// ```
-/// use my_thread_pool::spawn;
-///
-/// let handle = spawn(|| {
-///     println!("This closure is executed in a spawned thread!");
-///     42
-/// });
-///
-/// let result = handle.join().unwrap();
-/// println!("Result from the spawned thread: {}", result);
-/// ```
-pub fn spawn<F, T>(f: F) -> thread::JoinHandle<T>
-    where
-        F: FnOnce() -> T,  // a closure that takes no arguments and returns T
-        F: Send + 'static,  // the closure can be sent from one thread to another
-        T: Send + 'static,  // the closure does not reference anything on the stack (it can be moved to another thread)
-{
-    Builder::new().spawn(f).expect("Failed to spawn thread.")
+        // do the same as above using a closure
+        self.workers.iter().for_each(|_| self.sender.send(Message::Terminate).unwrap());
+
+        for worker in &mut self.workers {
+            println!("Shutting down worker {}", worker.id);
+            if let Some(thread) = worker.thread.take() {
+                thread.join().unwrap();
+            }
+        }
+    }
+
 }
 
 
 #[derive(Debug)]
 struct Worker {
     id: usize,
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
-        let thread = thread::spawn(move || {
-            while let Ok(job) = receiver.lock().unwrap().recv() {
-                println!("Worker {id} got a job; executing.");
-                job();
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
+        let thread = Some(thread::spawn(move || {  // Spawn a new thread
+            loop {
+                let message = receiver.lock().unwrap().recv().unwrap();  // Receive a message from the channel
+                match message {
+                    Message::NewJob(job) => {
+                        println!("Worker {} got a job; executing.", id);
+                        job();  // Execute the job
+                    },
+                    Message::Terminate => {
+                        println!("Worker {} was told to terminate.", id);
+                        break;
+                    },
+                }
             }
-        });
-        Worker { id, thread }
+        }));
+        Worker { 
+            id, 
+            thread
+        }
     }
 }
-
-// todo: Impl a better way to parse the request line
-// todo: Understand at 100% the code above (mostly the ThreadPool struct & it's impl techniques)
-// todo: Impl Shoutdown and Cleanup behavior for the ThreadPool

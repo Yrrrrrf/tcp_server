@@ -26,12 +26,11 @@
 //! - The server currently serves a default "200 OK" response for every request.
 //! - The server may exit after handling a specific number of requests (configured in the code).
 //! - Logging is configured with varying levels from `Trace` to `Info`.
-#![allow(unused)]
+// #![allow(unused)]
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
 // Standard library imports
-use std::fmt::Display;
 use std::io::{Read, Write};
 use std::net::{TcpStream, TcpListener};
 use std::path::Path;
@@ -61,22 +60,20 @@ fn main() {
     let ip = section.unwrap().get_key_value("ip").unwrap();
     let port = section.unwrap().get_key_value("port").unwrap();
 
-    // ^ Actual code: --------------------------------------------------------------------------------------------------------
     let server_address = format!("{}:{}", ip.1, port.1);
     log::info!("Starting server at {}\n", server_address);
 
-    let listener = TcpListener::bind(server_address)  // Listen on this address
-        .expect("Failed to bind to address.");  // If it fails, print this message
-
+    let listener = TcpListener::bind(server_address).expect("Failed to bind to address.");  // If it fails, print this message
     let pool = thread_pool::ThreadPool::new(8);  // Create a thread pool with 8 threads
     // Iterate over the incoming connections
-    listener.incoming().for_each(|stream| {
-        match stream {  // Match the stream (connection)
+    for stream in listener.incoming() {
+    // for stream in listener.incoming().take(3) {
+        match stream {
             Ok(stream) => pool.execute(|| handle_client(stream)),
-            Err(e) => eprintln!("Error: {}", e),
+            Err(e) => log::error!("Failed to establish a connection: {}", e),
         }
-    });
-
+    }
+    log::info!("Shutting down.");  // If the loop ends, print this message (the server is shutting down)
 }
 
 
@@ -116,7 +113,7 @@ fn handle_client(mut stream: TcpStream)  {
             // * Manage Response --------------------------------------------------------------
             // If the request is not for the favicon, then match the request line...
             match match_request_line(request_line) {
-                Some(mut response) => stream.write(response.to_string().as_bytes()).unwrap(),
+                Some(response) => stream.write(response.to_string().as_bytes()).unwrap(),
                 None => stream.write(
                     // This is a bad request. Can be reached by sending an invalid request line.
                     // A web browser will never send an invalid request line.
@@ -127,36 +124,11 @@ fn handle_client(mut stream: TcpStream)  {
                     .to_string().as_bytes()).unwrap(),
             };
 
-           
-            // * To be sure that the response is sent, flush the stream
-            // match stream.flush() {  // Flush the stream to make sure that the response is sent
-            //     Ok(_) => log::trace!("Response sent."),  // If the flush was successful
-            //     Err(e) => log::error!("Failed to flush the stream: {}", e),
-            // }
         }
-        Err(e) => {
-            log::error!("Failed to read from connection: {}", e);
-        },
+        Err(e) => log::error!("Failed to read from connection: {}", e),
     }
 
 }
-
-
-// /// Close the connection.
-// /// 
-// /// This function is not used because the connection is closed by the client.
-// /// 
-// /// This function is only used for testing.
-// /// 
-// /// # Arguments
-// /// 
-// /// - `stream` - The TcpStream to close.
-// fn close_connection(mut stream: TcpStream) {
-//     log::warn!("Closing connection.");
-//     stream.write_all("Closing connection.".as_bytes()).unwrap();  // send a message to the client
-//     stream.shutdown(std::net::Shutdown::Both).unwrap();  // close the connection (both ways)
-//     std::process::exit(0);  // finalize the program
-// }
 
 
 /// Matches and parses the components of an HTTP request line, returning a corresponding response.
@@ -231,11 +203,11 @@ fn handle_service(url: &str) -> HttpResponse {
 ///
 /// An `HttpResponse` representing the server's response.
 fn generate_response(message: &str, status: HttpStatus) -> HttpResponse {
-    let mut html = std::fs::read_to_string("resources\\html\\index.html").unwrap();
     HttpResponse::new(
         status.clone(), 
         HttpVersion::Http1_1, 
-        html.replace("{TITLE}", status.message())
+        std::fs::read_to_string("resources\\html\\index.html").unwrap()
+            .replace("{TITLE}", status.message())
             .replace("{CODE}", &status.code().to_string())
             .replace("{STATUS}", &status.message())
             .replace("{MESSAGE}", message)
