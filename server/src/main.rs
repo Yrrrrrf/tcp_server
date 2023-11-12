@@ -1,13 +1,40 @@
 //! # Rust TCP Server
-//! 
-//! This is a simple TCP server written in Rust.
-//! 
-//! Handles multiple connections using threads.
-//! 
+//!
+//! This module defines a simple TCP server in Rust that handles multiple connections using threads.
+//!
+//! ## Features
+//!
+//! - TCP server with thread pool handling incoming connections.
+//! - Parses HTTP requests and generates appropriate responses.
+//! - Supports basic routing and file serving.
+//!
+//! ## Usage
+//!
+//! To use this server, simply call the `main` function. The server reads configuration data from
+//! the `resources/keys/keys.toml` file, including IP address and port.
+//!
+//! ## Dependencies
+//!
+//! This module relies on external crates for various utilities:
+//!
+//! - `log`: A flexible logging framework for Rust.
+//! - `dev_utils`: A set of utility functions for development purposes.
+//!
+//! ## Important Notes
+//!
+//! - The server responds to HTTP GET requests, handling basic routing.
+//! - The server currently serves a default "200 OK" response for every request.
+//! - The server may exit after handling a specific number of requests (configured in the code).
+//! - Logging is configured with varying levels from `Trace` to `Info`.
+//!
+//! ## License
+//!
+//! This code is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 #![allow(unused)]
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
+use std::fmt::Display;
 // Standard library imports
 use std::io::{Read, Write};
 use std::net::{TcpStream, TcpListener};
@@ -18,7 +45,7 @@ use log::LevelFilter;
 use dev_utils::log::rlog::RLog;
 use dev_utils::print_app_data;
 
-use dev_utils::http::{*, request::HttpRequest, response::HttpResponse};
+use dev_utils::http::{*, response::HttpResponse};
 
 mod thread_pool;
 
@@ -77,38 +104,47 @@ fn handle_client(mut stream: TcpStream)  {
                     log::warn!("Favicon requested. POSSIBLY IS A Repeated request?");
                     return
                 },
-                false => {  // * If the request is not for the favicon, then continue
+                false => {  // * If the request is not for the /favicon.ico, then continue
                     log::trace!("New connection from {}", stream.peer_addr().unwrap());
-                    match_request_line(request_line);
                 }
             }
 
+            // * Same as above, but with map_or_else
+            // request_line.split_whitespace().nth(1).map_or_else(
+            //     || log::warn!("Invalid request line: {}", request_line),
+            //     |url| {
+            //         if url == "/favicon.ico" {
+            //             log::warn!("Favicon requested. POSSIBLY IS A Repeated request?");
+            //             return
+            //         } else {
+            //             log::trace!("New connection from {}", stream.peer_addr().unwrap());
+            //         }
+            //     }
+            // );
+
+
             // * Manage Response --------------------------------------------------------------
+            // If the request is not for the favicon, then match the request line...
+            match match_request_line(request_line) {
+                Some(mut response) => {
+                    // log::info!("Response: {}", response.to_string());
+                    stream.write(response.to_string().as_bytes()).unwrap();
+                },
+                None => {
+                    log::error!("Invalid request line.");
+                    // stream.write("Invalid request line.".as_bytes()).unwrap();
+                },
+            };
 
-            let response = HttpResponse::new(
-                HttpStatus::_200,
-                HttpVersion::Http1_1,
-                std::fs::read_to_string("resources\\html\\200.html").unwrap()  // Contents of the file
-            ).to_string();
-
-            // The difference between .write and .write_all is that .write_all writes the entire buffer
-            // So .write will write the first 5 bytes of the buffer
-            // And .write_all will write the entire buffer
-            stream.write(response.as_bytes()).unwrap();  // Write the 'response' as bytes to the client's connection.
-            // ? Return the response in reverse (for testing)
-            // stream.write_all(String::from_utf8_lossy(&buffer[..size]).chars().rev().collect::<String>().as_bytes()).unwrap();
-            
+           
             // * To be sure that the response is sent, flush the stream
             // match stream.flush() {  // Flush the stream to make sure that the response is sent
             //     Ok(_) => log::trace!("Response sent."),  // If the flush was successful
             //     Err(e) => log::error!("Failed to flush the stream: {}", e),
             // }
-
-            // Ok(())  // Confirm that the function was executed successfully
         }
         Err(e) => {
             log::error!("Failed to read from connection: {}", e);
-            // Err(())
         },
     }
 
@@ -132,37 +168,54 @@ fn handle_client(mut stream: TcpStream)  {
 // }
 
 
-fn match_request_line(request_line: String) {
-    match request_line.split_whitespace().nth(0) {  // * Http method
-        Some(method) => log::info!("{}", HttpMethod::from_str(method).unwrap().as_str()),
-        None => log::error!("Invalid request line: {}", request_line),
+fn match_request_line(request_line: String) -> Option<HttpResponse> {
+    let mut parts = request_line.split_whitespace();
+
+    let (method, url, http_version) = (
+        HttpMethod::from_str(parts.next().unwrap()), 
+        parts.next(),
+        HttpVersion::from_str(parts.next().unwrap())
+    );
+
+    // * If at least 1 of the values is None, then return None
+    if method.is_none() || url.is_none() || http_version.is_none() {
+        log::error!("Invalid request line: {}", request_line);
+        return None;
+    } else {
+        log::debug!("Method: {:?}", method.unwrap());
+        log::debug!("Url: {}", url.unwrap());
+        log::debug!("Http version: {}", http_version.unwrap());
+        return Some(handle_service(url.unwrap()));  // If the request line is valid, return the response
     }
-    match request_line.split_whitespace().nth(2) {  // * Http version
-        Some(http_version) => log::info!("{}", HttpVersion::from_str(http_version).unwrap()),
-        None => log::error!("Invalid request line: {}", request_line),
-    }
-    match request_line.split_whitespace().nth(1) {  // * Url
-        Some(url) => log::info!("{}", url),
-        None => log::error!("Invalid request line: {}", request_line),
-    }
+
 }
 
-// // SAME AS ABOVE BUT USING MAP_OR_ELSE
-// todo: Bench both functions and see which one is faster
-// fn match_request_line(request_line: String) {
-//     // match http method (GET, POST, PUT, DELETE, etc.)
-//     request_line.split_whitespace().nth(0).map_or_else(  // * Http method
-//         || log::error!("Invalid request line: {}", request_line),
-//         |method| log::info!("{}", HttpMethod::from_str(method).unwrap().as_str()),
-//     );
-//     // match http version (HTTP/1.1, HTTP/2.0, etc.)
-//     request_line.split_whitespace().nth(2).map_or_else(  // * Http version
-//         || log::error!("Invalid request line: {}", request_line),
-//         |http_version| log::info!("{}", HttpVersion::from_str(http_version).unwrap()),
-//     );
-//     // match url services (/, /about, /contact, etc.)
-//     request_line.split_whitespace().nth(1).map_or_else(  // * Url
-//         || log::error!("Invalid request line: {}", request_line),
-//         |url| log::info!("{}", url),
-//     );
-// }
+
+// todo: Impl a better routing system
+// options for routing:
+// - match the url with a regex
+// - match the url with a hashmap
+// - match the url with a match statement (same as now) ... but better
+fn handle_service(url: impl Into<String> + Display + Copy) -> HttpResponse { 
+    let mut html = std::fs::read_to_string("resources\\html\\index.html").unwrap();
+    match url.into().as_str() {
+        "/" => {
+            log::info!("Home page");
+            
+            HttpResponse::new(HttpStatus::_200, HttpVersion::Http1_1, html
+                .replace("{TITLE}", "OK")
+                .replace("{CODE}" , "200")
+                .replace("{STATUS}", "OK")
+                .replace("{MESSAGE}", "Everything is OK"),
+            )
+        },
+        _ => {
+            log::warn!("501 Not Implemented ({}).", url);
+            HttpResponse::new(
+                HttpStatus::_501,  // 501 Not Implemented
+                HttpVersion::Http1_1,
+                "".to_string()
+            )
+        },
+    }
+}

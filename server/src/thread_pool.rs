@@ -89,7 +89,7 @@ impl ThreadPool {
 ///
 /// # Returns
 ///
-/// A JoinHandle<T> where T is the type returned by the closure.
+/// A `JoinHandle<T>` where T is the type returned by the closure.
 ///
 /// # Examples
 ///

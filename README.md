@@ -10,24 +10,37 @@ It allows a client to connect to it and send a message. The server will then pri
 The main purpose of this project is to learn how to create a TCP server in Rust without using any external crates. **Only the Rust standard library is used**.
 
 ## Setup
-- Set an IP address on the [`main_client`](./client/src/main.rs) & [`main_server`](./server/src/main.rs) files to connect to the server.
-- Use `cargo build` to build the project.
-- Use `cargo run` to run the project. 
+- Check the [`Cargo.toml`](./Cargo.toml) file to see the dependencies.
+```toml
+[dependencies]
+log = "0.4.*"
+dev_utils = "0.*"  # most recent version
+```
+- Modify the [`keys.toml`](./resources/keys/keys.toml) file to set the IP address and port of the server.
+```toml
+[ip_address]
+ip = "127.0.0.1"  # localhost
+port = "8080"  # default port
+```
+- Use the [`server` main](./server/src/main.rs) to initialize the server.
+- Test the connection with the [`client` main](./client/src/main.rs).
+- Use `cargo build` to build the project. Then execute these commands to run the server and the client.
 ```bash
 cargo run -p server  # Initialize the server on the specified IP address and port
 cargo run -p client  # Test the connection with the client
 # The clien probably will become a separate project or an struct in the server project
-# Maybe this (all) will be abstracted in a module for dev_utils crate
+# Maybe this (all of these) will be abstracted in a module for dev_utils crate
 ```
 
 ## Features
-- [X] This project meants to be a TCP server that listens on a specific IP address and port.
+- [X] Set an IP address and port. [(`keys.toml`)](./resources/keys/keys.toml)
 - [X] Error Handling
-- [ ] Socket Programming: Use socket programming libraries and APIs (e.g., socket in Python, socket in C/C++) to create and manage network sockets for both the client and server. Sockets are essential for establishing connections and sending/receiving data.
-- [X] Connection Establishment between Client and Server
-- [ ] Data Serialization
-- [ ] Message Framing: Establish a protocol for framing messages, so the receiver knows where one message ends and the next one begins. Common techniques include using fixed-length messages or delimiters.
-- [ ] Logging and Monitoring
+- [X] Impl a basic Web Socket Server
+  - [X] Logging and Monitoring
+  - [X] Connection Establishment between Client and Server
+  - [ ] Add multitreading support 
+  - [ ] Data Serialization
+  - [ ] Message Framing: Establish a protocol for framing messages, so the receiver knows where one message ends and the next one begins. Common techniques include using fixed-length messages or delimiters.
 - [ ] Testing
 
 ## References

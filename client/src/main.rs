@@ -36,27 +36,18 @@ fn main() {
 
     match TcpStream::connect(server_address) {
         Ok(mut stream) => {
-            // let request = HttpRequest::new_1_1(
-            //     // HttpMethod::POST, 
-            //     HttpMethod::GET, 
-            //     // "/index.html".to_string(), 
-            //     "/contact", 
-            //     // "/", 
-            //     "Hello, Rust!".to_string()
-            // );
-
             let request = HttpRequest::new(
-                // HttpMethod::GET, 
-                HttpMethod::DELETE, 
-                // HttpVersion::Http1_1,
-                HttpVersion::Http2_0,
-                "/index.html".to_string(), 
-                // "/contact", 
-                // "/", 
+                HttpMethod::GET, 
+                // HttpMethod::DELETE,
+                HttpVersion::Http1_1,
+                // HttpVersion::Http2_0,
+                // "/index",
+                "/",
+                // "/yesnt`",
                 "Hello, Rust!".to_string()
             );
-
-            println!("{:?}", request);
+            // let request = "GET / HTTP/1.1".to_string();
+            // println!("{:?}", request);
             stream.write(request.to_string().as_bytes()).unwrap();
 
             let mut buffer = [0; 1024];
