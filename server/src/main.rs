@@ -81,6 +81,11 @@ fn main() {
 }
 
 
+/// Handles a client connection by reading the request, checking for favicon requests, and generating a response.
+///
+/// # Arguments
+///
+/// - `stream`: The `TcpStream` representing the client connection.
 fn handle_client(mut stream: TcpStream)  {
     // * Buffer reads the data from the stream and stores it in the buffer
     let mut buffer = [0; 1024];  // 1 KB buffer (1024 bytes)
@@ -105,35 +110,22 @@ fn handle_client(mut stream: TcpStream)  {
                     return
                 },
                 false => {  // * If the request is not for the /favicon.ico, then continue
-                    log::trace!("New connection from {}", stream.peer_addr().unwrap());
+                    log::info!("New connection from {}", stream.peer_addr().unwrap());
                 }
             }
-
-            // * Same as above, but with map_or_else
-            // request_line.split_whitespace().nth(1).map_or_else(
-            //     || log::warn!("Invalid request line: {}", request_line),
-            //     |url| {
-            //         if url == "/favicon.ico" {
-            //             log::warn!("Favicon requested. POSSIBLY IS A Repeated request?");
-            //             return
-            //         } else {
-            //             log::trace!("New connection from {}", stream.peer_addr().unwrap());
-            //         }
-            //     }
-            // );
-
 
             // * Manage Response --------------------------------------------------------------
             // If the request is not for the favicon, then match the request line...
             match match_request_line(request_line) {
-                Some(mut response) => {
-                    // log::info!("Response: {}", response.to_string());
-                    stream.write(response.to_string().as_bytes()).unwrap();
-                },
-                None => {
-                    log::error!("Invalid request line.");
-                    // stream.write("Invalid request line.".as_bytes()).unwrap();
-                },
+                Some(mut response) => stream.write(response.to_string().as_bytes()).unwrap(),
+                None => stream.write(
+                    // This is a bad request. Can be reached by sending an invalid request line.
+                    // A web browser will never send an invalid request line.
+                    // But a client can send an invalid request line. For example, a client can send:
+                    // "GET / HTTP/2.4"
+                    // Thats why this do not include a html file as body. It is just a plain text.
+                HttpResponse::new(HttpStatus::_400, HttpVersion::Http1_1, "Invalid ".to_string())
+                    .to_string().as_bytes()).unwrap(),
             };
 
            
@@ -168,6 +160,19 @@ fn handle_client(mut stream: TcpStream)  {
 // }
 
 
+/// Matches and parses the components of an HTTP request line, returning a corresponding response.
+///
+/// This function extracts the HTTP method, URL, and HTTP version from the request line. If any of these
+/// components is missing, it logs an error and returns `None`. Otherwise, it generates a response based
+/// on the parsed components.
+///
+/// # Arguments
+///
+/// - `request_line`: The HTTP request line to parse.
+///
+/// # Returns
+///
+/// An `Option` containing the corresponding `HttpResponse` if parsing is successful; otherwise, `None`.
 fn match_request_line(request_line: String) -> Option<HttpResponse> {
     let mut parts = request_line.split_whitespace();
 
@@ -191,31 +196,50 @@ fn match_request_line(request_line: String) -> Option<HttpResponse> {
 }
 
 
-// todo: Impl a better routing system
-// options for routing:
-// - match the url with a regex
-// - match the url with a hashmap
-// - match the url with a match statement (same as now) ... but better
-fn handle_service(url: impl Into<String> + Display + Copy) -> HttpResponse { 
+/// Handles a service based on the provided URL and generates an appropriate HTTP response.
+///
+/// This function implements a basic routing system where specific URLs are matched to generate custom responses.
+/// It logs debugging information and returns an `HttpResponse` based on the matched URL.
+///
+/// # Arguments
+///
+/// - `url`: The URL to handle.
+///
+/// # Returns
+///
+/// An `HttpResponse` representing the server's response.
+fn handle_service(url: &str) -> HttpResponse { 
+    log::trace!("Generating response for {}", url);
+    match url {
+        "/" => generate_response("/", HttpStatus::_200),
+        "/about" => generate_response("Not impl yet", HttpStatus::_501),
+        "/contact" => generate_response("Not impl yet", HttpStatus::_501),
+        _ => generate_response("Unknown Service", HttpStatus::_404),
+    }    
+}
+
+
+/// Generates an HTTP response for a given message and status code.
+///
+/// This function reads an HTML file, replaces placeholders with specific values, and constructs
+/// an `HttpResponse` with the provided status code and modified HTML content.
+///
+/// # Arguments
+///
+/// - `message`: The message to include in the response.
+/// - `status`: The HTTP status code for the response.
+///
+/// # Returns
+///
+/// An `HttpResponse` representing the server's response.
+fn generate_response(message: &str, status: HttpStatus) -> HttpResponse {
     let mut html = std::fs::read_to_string("resources\\html\\index.html").unwrap();
-    match url.into().as_str() {
-        "/" => {
-            log::info!("Home page");
-            
-            HttpResponse::new(HttpStatus::_200, HttpVersion::Http1_1, html
-                .replace("{TITLE}", "OK")
-                .replace("{CODE}" , "200")
-                .replace("{STATUS}", "OK")
-                .replace("{MESSAGE}", "Everything is OK"),
-            )
-        },
-        _ => {
-            log::warn!("501 Not Implemented ({}).", url);
-            HttpResponse::new(
-                HttpStatus::_501,  // 501 Not Implemented
-                HttpVersion::Http1_1,
-                "".to_string()
-            )
-        },
-    }
+    HttpResponse::new(
+        status.clone(), 
+        HttpVersion::Http1_1, 
+        html.replace("{TITLE}", status.message())
+            .replace("{CODE}", &status.code().to_string())
+            .replace("{STATUS}", &status.message())
+            .replace("{MESSAGE}", message)
+    )
 }

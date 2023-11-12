@@ -38,16 +38,15 @@ fn main() {
         Ok(mut stream) => {
             let request = HttpRequest::new(
                 HttpMethod::GET, 
-                // HttpMethod::DELETE,
                 HttpVersion::Http1_1,
-                // HttpVersion::Http2_0,
                 // "/index",
                 "/",
-                // "/yesnt`",
                 "Hello, Rust!".to_string()
             );
-            // let request = "GET / HTTP/1.1".to_string();
-            // println!("{:?}", request);
+            // let request = "GET / HTTP/1.1".to_string();  // Valid HTTP request
+            // let request = "GET / HTTP/2.4".to_string();  // Invalid HTTP version (505)
+            // let request = "GET /fiveOfive.html HTTP/1.1".to_string();  // Not Implemented (501)
+
             stream.write(request.to_string().as_bytes()).unwrap();
 
             let mut buffer = [0; 1024];
@@ -59,7 +58,6 @@ fn main() {
     }
 
 }
-
 
 // Create the client struct. The client must send a request to the server and receive a response.
 // The client must be able to send a request with a body and receive a response with a body.
