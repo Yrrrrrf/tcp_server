@@ -37,10 +37,11 @@ fn main() {
     match TcpStream::connect(server_address) {
         Ok(mut stream) => {
             let request = HttpRequest::new(
-                HttpMethod::GET, 
+                // HttpMethod::GET, 
+                HttpMethod::POST, 
                 HttpVersion::Http1_1,
                 // "/index",
-                "/",
+                "yes",
                 "Hello, Rust!".to_string()
             );
             // let request = "GET / HTTP/1.1".to_string();  // Valid HTTP request

@@ -26,7 +26,7 @@
 //! - The server currently serves a default "200 OK" response for every request.
 //! - The server may exit after handling a specific number of requests (configured in the code).
 //! - Logging is configured with varying levels from `Trace` to `Info`.
-// #![allow(unused)]
+#![allow(unused)]
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
@@ -35,13 +35,17 @@ use std::io::{Read, Write};
 use std::net::{TcpStream, TcpListener};
 use std::path::Path;
 
+
 // External crates
 use log::LevelFilter;
 use dev_utils::{
     print_app_data,
     log::rlog::RLog,
-    files::toml::TomlFile,
     http::{*, response::HttpResponse},
+    files::{
+        toml::TomlFile,
+        crud,
+    },
 };
 
 // Internal modules
@@ -99,29 +103,42 @@ fn handle_client(mut stream: TcpStream)  {
                 .to_owned();  // Convert the &str to String
             // println!("Request line: {:?}", request_line);
 
+            // get the body (the rest of the request) as a &str
+            let body = String::from_utf8_lossy(&buffer[..size])
+                .lines()  // Split the string into lines
+                .skip(1)  // Skip the first line (the request line)
+                .collect::<Vec<&str>>()  // Collect the lines into a vector of &str
+                .join("\n");  // Join the lines with a newline character
+
             //  ^ Avoid the favicon request (a browser will always request the favicon)
             match request_line.split_whitespace().nth(1) == Some("/favicon.ico") {
-                true => {  // If the request is for the favicon, return (close the connection)
-                    log::warn!("Favicon requested. POSSIBLY IS A Repeated request?");
-                    return
-                },
-                false => {  // * If the request is not for the /favicon.ico, then continue
-                    log::info!("New connection from {}", stream.peer_addr().unwrap());
+                true => {log::warn!("Favicon requested. POSSIBLY IS A Repeated request?");
+                    return  // If the request is for the favicon, return (close the connection)
                 }
+                false =>  log::info!("New connection from {}", stream.peer_addr().unwrap()),
             }
 
             // * Manage Response --------------------------------------------------------------
-            // If the request is not for the favicon, then match the request line...
-            match match_request_line(request_line) {
-                Some(response) => stream.write(response.to_string().as_bytes()).unwrap(),
-                None => stream.write(
-                    // This is a bad request. Can be reached by sending an invalid request line.
-                    // A web browser will never send an invalid request line.
-                    // But a client can send an invalid request line. For example, a client can send:
-                    // "GET / HTTP/2.4"
-                    // Thats why this do not include a html file as body. It is just a plain text.
-                HttpResponse::new(HttpStatus::_400, HttpVersion::Http1_1, "Invalid ".to_string())
-                    .to_string().as_bytes()).unwrap(),
+            match match_request_line(&request_line) {
+                Some((method, url, http_version)) => {
+                    // log::trace!("Http v: {}", http_version);
+                    // log::trace!("Method: {:?}", method);
+                    // log::trace!("Url: {}", url);
+                    match_method_and_url(method, url, &body);
+                    
+                    let response = handle_service(&url);
+                    
+                    stream.write(response.to_string().as_bytes()).unwrap();
+                    log::debug!("Response sent.");
+                },
+                None => {  // Handle a bad request line
+                    log::error!("Invalid request line: {}", request_line);
+                    stream.write(  // A web browser will never send an invalid request line but a client can.
+                        // For example, a client can send: "GET / HTTP/2.4"
+                        // That's why this do not include a html file as body. It is just a plain text.
+                    HttpResponse::new(HttpStatus::_400, HttpVersion::Http1_1, "Invalid ".to_string())
+                        .to_string().as_bytes()).unwrap();
+                },
             };
 
         }
@@ -131,7 +148,7 @@ fn handle_client(mut stream: TcpStream)  {
 }
 
 
-/// Matches and parses the components of an HTTP request line, returning a corresponding response.
+/// Matches and parses the components of an HTTP request line. Then, it generates an appropriate response.
 ///
 /// This function extracts the HTTP method, URL, and HTTP version from the request line. If any of these
 /// components is missing, it logs an error and returns `None`. Otherwise, it generates a response based
@@ -143,27 +160,53 @@ fn handle_client(mut stream: TcpStream)  {
 ///
 /// # Returns
 ///
-/// An `Option` containing the corresponding `HttpResponse` if parsing is successful; otherwise, `None`.
-fn match_request_line(request_line: String) -> Option<HttpResponse> {
+/// An `Option` containing the parsed components of the request line.
+fn match_request_line(request_line: &String) -> Option<(HttpMethod, &str, HttpVersion)> {
     let mut parts = request_line.split_whitespace();
+    // the order of the parts is important because the iterator is consumed
+    Some((  // parse the request line (method, url, http_version)
+        HttpMethod::from_str(parts.next()?)?,  // the method is a HttpMethod enum
+        parts.next()?,  // the url is a String
+        HttpVersion::from_str(parts.next()?)?  // the http_version is a HttpVersion enum
+    ))  // return the tuple (method, url, http_version)
+}
 
-    let (method, url, http_version) = (
-        HttpMethod::from_str(parts.next().unwrap()), 
-        parts.next(),
-        HttpVersion::from_str(parts.next().unwrap())
-    );
-
-    // * If at least 1 of the values is None, then return None
-    if method.is_none() || url.is_none() || http_version.is_none() {
-        log::error!("Invalid request line: {}", request_line);
-        return None;
-    } else {
-        log::debug!("Method: {:?}", method.unwrap());
-        log::debug!("Url: {}", url.unwrap());
-        log::debug!("Http version: {}", http_version.unwrap());
-        return Some(handle_service(url.unwrap()));  // If the request line is valid, return the response
+ 
+// todo: rename this method
+// todo: extract the url validation (for file serving)
+fn match_method_and_url(method: HttpMethod, url: &str, body: &str) {
+    let path = "resources\\temp\\";
+    
+    match method {
+        HttpMethod::POST => {
+            match crud::create_file(&path, &format!("{url}.txt"), "aasas") {
+                Ok(_) => log::info!("File created successfully. {}", format!("{path}{url}.txt")),
+                Err(e) => log::error!("Failed to create file: {}", e),
+            }
+        },
+        HttpMethod::GET => {
+            match crud::read_file(&path, &format!("{url}.txt")) {
+                Ok(_) => log::info!("File read successfully. {}", format!("{path}{url}.txt")),
+                Err(e) => log::error!("Failed to read file: {}", e),
+            }
+        },
+        HttpMethod::PUT => {
+            match crud::update_file(&path, &format!("{url}.txt"), "aasas") {
+                Ok(_) => log::info!("File updated successfully. {}", format!("{path}{url}.txt")),
+                Err(e) => log::error!("Failed to update file: {}", e),
+            }
+        },
+        HttpMethod::DELETE => {
+            match crud::delete_file(&path, &format!("{url}.txt")) {
+                Ok(_) => log::info!("File deleted successfully. {}", format!("{path}{url}.txt")),
+                Err(e) => log::error!("Failed to delete file: {}", e),                
+            }
+        },
+        // _ => log::warn!("Some other request (not implemented)"),
     }
 }
+
+// ? Modified functions (to add behavior depending on the URL & request method) -----------------------------------------------
 
 
 /// Handles a service based on the provided URL and generates an appropriate HTTP response.
@@ -179,11 +222,12 @@ fn match_request_line(request_line: String) -> Option<HttpResponse> {
 ///
 /// An `HttpResponse` representing the server's response.
 fn handle_service(url: &str) -> HttpResponse { 
-    log::trace!("Generating response for {}", url);
+    log::debug!("Generating response for {}", url);
     match url {
         "/" => generate_response("/", HttpStatus::_200),
         "/about" => generate_response("Not impl yet", HttpStatus::_501),
         "/contact" => generate_response("Not impl yet", HttpStatus::_501),
+        // 
         _ => generate_response("Unknown Service", HttpStatus::_404),
     }    
 }

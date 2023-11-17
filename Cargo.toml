@@ -1,22 +1,10 @@
 [workspace]
 members = ["server", "client"]
 
-# The resolver version is used to determine which version of the compiler to use
-resolver = "2"  # 2 is the latest version of the resolver
-
-# COMPILE OPTIMIZATION ------------------------------------------------------------------------
-# where 0 is the lowest and 3 is the highest level of optimization
+resolver = "2"  # version of rustc to use (compiler)
 
 [profile.dev]
-opt-level = 0  # no optimizations (fastest compile time, slowest runtime)
+opt-level = 0  # no optimization
 
 [profile.release]
-opt-level = 3  # full optimizations (slowest compile time, fastest runtime)
-
-# [[bin]]
-# name = "main_server"
-# path = "src/main_server.rs"
-
-# [[bin]]
-# name = "main_client"
-# path = "src/main_client.rs"
+opt-level = 3  # fully optimized

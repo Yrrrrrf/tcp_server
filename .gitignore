@@ -18,6 +18,4 @@ Cargo.lock
 tcp_socket_impl.md
 # *.gif
 
-# Personal access tokens (keep these secret)
-keys.md
-
+resources/temp/*
