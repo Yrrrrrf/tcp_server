@@ -110,7 +110,7 @@ fn handle_client(mut stream: TcpStream)  {
                 .collect::<Vec<&str>>()  // Collect the lines into a vector of &str
                 .join("\n");  // Join the lines with a newline character
 
-            //  ^ Avoid the favicon request (a browser will always request the favicon)
+            //^ Avoid the favicon request (a browser will always request the favicon)
             match request_line.split_whitespace().nth(1) == Some("/favicon.ico") {
                 true => {log::warn!("Favicon requested. POSSIBLY IS A Repeated request?");
                     return  // If the request is for the favicon, return (close the connection)
@@ -126,8 +126,7 @@ fn handle_client(mut stream: TcpStream)  {
                     // log::trace!("Url: {}", url);
                     match_method_and_url(method, url, &body);
                     
-                    let response = handle_service(&url);
-                    
+                    let response = handle_service(url);
                     stream.write(response.to_string().as_bytes()).unwrap();
                     log::debug!("Response sent.");
                 },
@@ -171,40 +170,25 @@ fn match_request_line(request_line: &String) -> Option<(HttpMethod, &str, HttpVe
     ))  // return the tuple (method, url, http_version)
 }
 
- 
+
 // todo: rename this method
 // todo: extract the url validation (for file serving)
 fn match_method_and_url(method: HttpMethod, url: &str, body: &str) {
-    let path = "resources\\temp\\";
-    
-    match method {
-        HttpMethod::POST => {
-            match crud::create_file(&path, &format!("{url}.txt"), "aasas") {
-                Ok(_) => log::info!("File created successfully. {}", format!("{path}{url}.txt")),
-                Err(e) => log::error!("Failed to create file: {}", e),
-            }
-        },
-        HttpMethod::GET => {
-            match crud::read_file(&path, &format!("{url}.txt")) {
-                Ok(_) => log::info!("File read successfully. {}", format!("{path}{url}.txt")),
-                Err(e) => log::error!("Failed to read file: {}", e),
-            }
-        },
-        HttpMethod::PUT => {
-            match crud::update_file(&path, &format!("{url}.txt"), "aasas") {
-                Ok(_) => log::info!("File updated successfully. {}", format!("{path}{url}.txt")),
-                Err(e) => log::error!("Failed to update file: {}", e),
-            }
-        },
-        HttpMethod::DELETE => {
-            match crud::delete_file(&path, &format!("{url}.txt")) {
-                Ok(_) => log::info!("File deleted successfully. {}", format!("{path}{url}.txt")),
-                Err(e) => log::error!("Failed to delete file: {}", e),                
-            }
-        },
-        // _ => log::warn!("Some other request (not implemented)"),
-    }
+    let path = ".\\resources\\temp\\";  // the path where the files will be created
+    let filename = format!("{}.txt", url.trim_start_matches('/'));
+
+    //^ This can look a little bit weird but it is just a match inside a match .____.
+    match match method {  //* Match the request method to perform the appropriate operation
+        HttpMethod::POST => crud::create_file(&path, &filename, body),
+        HttpMethod::GET => crud::read_file(&path, &filename),
+        HttpMethod::PUT => crud::update_file(&path, &filename, body),
+        HttpMethod::DELETE => crud::delete_file(&path, &filename),
+    } {  //* Match the result of the CRUD operation
+        Ok(ok) => log::info!("{ok}"),
+        Err(e) => log::error!("{e}"),
+    };
 }
+
 
 // ? Modified functions (to add behavior depending on the URL & request method) -----------------------------------------------
 

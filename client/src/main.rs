@@ -25,7 +25,7 @@ fn main() {
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Read the IP address and port from the keys.toml file
-    let keys = dev_utils::files::toml::TomlFile::new(Path::new("resources/keys/keys.toml"));
+    let keys = dev_utils::files::toml::TomlFile::new(Path::new(".\\resources\\keys\\keys.toml"));
     let section = keys.get_section_data("ip_address");
     let ip = section.unwrap().get_key_value("ip").unwrap();
     let port = section.unwrap().get_key_value("port").unwrap();
@@ -40,8 +40,9 @@ fn main() {
                 // HttpMethod::GET, 
                 HttpMethod::POST, 
                 HttpVersion::Http1_1,
-                // "/index",
-                "yes",
+                // "/",
+                "/about",
+                // "yes",
                 "Hello, Rust!".to_string()
             );
             // let request = "GET / HTTP/1.1".to_string();  // Valid HTTP request
@@ -61,4 +62,4 @@ fn main() {
 }
 
 // Create the client struct. The client must send a request to the server and receive a response.
-// The client must be able to send a request with a body and receive a response with a body.
+// The client must be able to send a Request and receive a Response

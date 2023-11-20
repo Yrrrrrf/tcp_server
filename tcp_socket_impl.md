@@ -30,11 +30,11 @@ If your goal is to learn how WebSockets work at a low level, it's a valuable exe
 ## Impl Log
 
 - [x] TCP Socket Establishment
-- [ ] WebSocket Handshake
-- [ ] WebSocket Frame Format
+- [x] WebSocket Handshake
+- [x] WebSocket Frame Format
 - [ ] Data Exchange
-- [ ] Error Handling
+- [x] Error Handling
 - [ ] Close Connection
-- [ ] Concurrency
+- [x] Concurrency
 - [ ] Testing and Compliance
 - [ ] Security
