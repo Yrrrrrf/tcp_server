@@ -1,6 +1,5 @@
 //! # TCP Client
 //! 
-#![allow(dead_code)]
 #![allow(unused)]
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
@@ -9,15 +8,18 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::Path;
-use std::thread;
 
 // External crates
-use log::{LevelFilter, warn, info, debug, trace, error};
-use dev_utils::log::rlog::RLog;
-use dev_utils::print_app_data;
-
-use dev_utils::http::{*, request::HttpRequest};
-
+use log::LevelFilter;
+use dev_utils::{
+    print_app_data,
+    log::rlog::RLog,
+    http::{
+        *, 
+        request::HttpRequest
+    },
+    files::toml::TomlFile,
+};
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
 fn main() {
@@ -25,7 +27,7 @@ fn main() {
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Read the IP address and port from the keys.toml file
-    let keys = dev_utils::files::toml::TomlFile::new(Path::new(".\\resources\\keys\\keys.toml"));
+    let keys = TomlFile::new(Path::new("resources/keys/keys.toml"));
     let section = keys.get_section_data("ip_address");
     let ip = section.unwrap().get_key_value("ip").unwrap();
     let port = section.unwrap().get_key_value("port").unwrap();
@@ -54,7 +56,20 @@ fn main() {
             let mut buffer = [0; 1024];
             let bytes = stream.read(&mut buffer).unwrap();
             let response = String::from_utf8_lossy(&buffer[0..bytes]);
-            println!("Response: {}", response);
+            // println!("Response: {}", response);
+
+            // Parse the response
+            // let response = HttpResponse::parse_response(response.to_string());
+
+            // * Handle the response headers
+            // todo: Handle the response headers
+
+            // * Handle the response body
+            // let the body be the section after the headers ON <!DOCTYPE html>
+            let body = response.split("<!DOCTYPE html>").collect::<Vec<&str>>()[1];
+            println!("Body: {}", body);
+
+
         },
         Err(e) => eprintln!("Failed to connect: {}", e),
     }

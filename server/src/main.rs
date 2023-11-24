@@ -28,13 +28,13 @@
 //! - Logging is configured with varying levels from `Trace` to `Info`.
 #![allow(unused)]
 
+
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
 // Standard library imports
 use std::io::{Read, Write};
 use std::net::{TcpStream, TcpListener};
 use std::path::Path;
-
 
 // External crates
 use log::LevelFilter;
@@ -52,10 +52,8 @@ use dev_utils::{
 mod thread_pool;
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
-// async fn main() -> Result<(), Box<dyn std::error::Error>> {  // for async main (async-std)
 fn main() {
     print_app_data(file!());  // Read the Cargo.toml file and print the app data (name, version, authors)
-    // RLog::init_logger(LevelFilter::Info);  // Initialize the logger with the given log level
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Read the IP address and port from the keys.toml file
@@ -67,17 +65,14 @@ fn main() {
     let server_address = format!("{}:{}", ip.1, port.1);
     log::info!("Starting server at {}\n", server_address);
 
-    let listener = TcpListener::bind(server_address).expect("Failed to bind to address.");  // If it fails, print this message
     let pool = thread_pool::ThreadPool::new(8);  // Create a thread pool with 8 threads
-    // Iterate over the incoming connections
-    for stream in listener.incoming() {
-    // for stream in listener.incoming().take(3) {
+    TcpListener::bind(server_address).expect("Failed to bind to address.").incoming().for_each(|stream| {
         match stream {
             Ok(stream) => pool.execute(|| handle_client(stream)),
             Err(e) => log::error!("Failed to establish a connection: {}", e),
         }
-    }
-    log::info!("Shutting down.");  // If the loop ends, print this message (the server is shutting down)
+    });
+    log::warn!("Shutting down.");  // If the loop ends, print this message (the server is shutting down)
 }
 
 
@@ -88,27 +83,18 @@ fn main() {
 /// - `stream`: The `TcpStream` representing the client connection.
 fn handle_client(mut stream: TcpStream)  {
     // * Buffer reads the data from the stream and stores it in the buffer
-    let mut buffer = [0; 1024];  // 1 KB buffer (1024 bytes)
-    // let mut buffer = [0; 32768];  // 32 KB buffer (32768 bytes)
-    // let mut buffer = [0; 131072];  // 128 KB buffer (131072 bytes)
+    const BUFFER_SIZE: usize = 32;  // 32 KB
+    let mut buffer = [0; 1024*BUFFER_SIZE];
 
     match stream.read(&mut buffer) {  // Read the data from the stream and store it in the buffer
         Ok(size) => {  // If the read was successful
-            // log::info!("({} Bytes):\n{} ", size, String::from_utf8_lossy(&buffer[..size]));
+            let buffer_str = String::from_utf8_lossy(&buffer[..size]);  // Convert the buffer to a String
+            let lines: Vec<&str> = buffer_str.lines().collect();  // Split the String into lines
 
-            let request_line = String::from_utf8_lossy(&buffer[..size])
-                .lines()  // Split the string into lines
-                .next()  // Get the first line
-                .unwrap()  // Unwrap the Option
-                .to_owned();  // Convert the &str to String
-            // println!("Request line: {:?}", request_line);
-
-            // get the body (the rest of the request) as a &str
-            let body = String::from_utf8_lossy(&buffer[..size])
-                .lines()  // Split the string into lines
-                .skip(1)  // Skip the first line (the request line)
-                .collect::<Vec<&str>>()  // Collect the lines into a vector of &str
-                .join("\n");  // Join the lines with a newline character
+            let request_line = lines.get(0).unwrap_or(&"").to_string();  // Get the first line (the request line)
+            // println!("Request line: {}", request_line);
+            let body = lines[1..].join("\n");  // Get the body (the rest of the lines)
+            // println!("Body: {}", body);
 
             //^ Avoid the favicon request (a browser will always request the favicon)
             match request_line.split_whitespace().nth(1) == Some("/favicon.ico") {
@@ -206,12 +192,12 @@ fn match_method_and_url(method: HttpMethod, url: &str, body: &str) {
 ///
 /// An `HttpResponse` representing the server's response.
 fn handle_service(url: &str) -> HttpResponse { 
-    log::debug!("Generating response for {}", url);
+    log::trace!("Generating response for {}", url);
     match url {
-        "/" => generate_response("/", HttpStatus::_200),
+        "/" => generate_response(HttpStatus::_200.message(), HttpStatus::_200),
         "/about" => generate_response("Not impl yet", HttpStatus::_501),
         "/contact" => generate_response("Not impl yet", HttpStatus::_501),
-        // 
+        // ^ Add more routes here...
         _ => generate_response("Unknown Service", HttpStatus::_404),
     }    
 }

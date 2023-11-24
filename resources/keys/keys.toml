@@ -1,4 +1,7 @@
 [ip_address]
 ip = "127.0.0.1"  # The IP address of the server
-port = 8080  # The port used by the server
-# The port specifies what application the client wants to connect to
+port = 8080  # The port specifies what application the client wants to connect to
+
+# [database]
+# host = "localhost"
+# password = "password"
