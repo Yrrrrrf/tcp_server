@@ -32,7 +32,7 @@
 // ? Module imports -----------------------------------------------------------------------------------------------------------
 
 // Standard library imports
-use std::io::{Read, Write};
+use std::io::{Read, Write, Error};
 use std::net::{TcpStream, TcpListener};
 use std::path::Path;
 
@@ -92,8 +92,8 @@ fn handle_client(mut stream: TcpStream)  {
             let lines: Vec<&str> = buffer_str.lines().collect();  // Split the String into lines
 
             let request_line = lines.get(0).unwrap_or(&"").to_string();  // Get the first line (the request line)
-            // println!("Request line: {}", request_line);
             let body = lines[1..].join("\n");  // Get the body (the rest of the lines)
+            // println!("Request line: {}", request_line);
             // println!("Body: {}", body);
 
             //^ Avoid the favicon request (a browser will always request the favicon)
@@ -110,19 +110,19 @@ fn handle_client(mut stream: TcpStream)  {
                     // log::trace!("Http v: {}", http_version);
                     // log::trace!("Method: {:?}", method);
                     // log::trace!("Url: {}", url);
-                    match_method_and_url(method, url, &body);
-                    
-                    let response = handle_service(url);
+
+                    let response = match_method_and_url(method, url, &body);
                     stream.write(response.to_string().as_bytes()).unwrap();
                     log::debug!("Response sent.");
                 },
                 None => {  // Handle a bad request line
                     log::error!("Invalid request line: {}", request_line);
-                    stream.write(  // A web browser will never send an invalid request line but a client can.
+                    stream.write(
+                        // A web browser will never send an invalid request line but a client can.
                         // For example, a client can send: "GET / HTTP/2.4"
                         // That's why this do not include a html file as body. It is just a plain text.
-                    HttpResponse::new(HttpStatus::_400, HttpVersion::Http1_1, "Invalid ".to_string())
-                        .to_string().as_bytes()).unwrap();
+                    HttpResponse::new(HttpStatus::_400, HttpVersion::Http1_1, "Invalid").to_string().as_bytes()
+                    ).unwrap();
                 },
             };
 
@@ -157,9 +157,7 @@ fn match_request_line(request_line: &String) -> Option<(HttpMethod, &str, HttpVe
 }
 
 
-// todo: rename this method
-// todo: extract the url validation (for file serving)
-fn match_method_and_url(method: HttpMethod, url: &str, body: &str) {
+fn match_method_and_url(method: HttpMethod, url: &str, body: &str)  -> HttpResponse {
     let path = ".\\resources\\temp\\";  // the path where the files will be created
     let filename = format!("{}.txt", url.trim_start_matches('/'));
 
@@ -167,39 +165,34 @@ fn match_method_and_url(method: HttpMethod, url: &str, body: &str) {
     match match method {  //* Match the request method to perform the appropriate operation
         HttpMethod::POST => crud::create_file(&path, &filename, body),
         HttpMethod::GET => crud::read_file(&path, &filename),
-        HttpMethod::PUT => crud::update_file(&path, &filename, body),
+        // HttpMethod::PUT => crud::update_file(&path, &filename, body),
+        HttpMethod::PUT => crud::append_file(&path, &filename, body),
         HttpMethod::DELETE => crud::delete_file(&path, &filename),
+        _ => {
+            log::error!("Method not implemented: {:?}", method);
+            return generate_response("Unknown Http Method Request", HttpStatus::_501)
+            // 501 Not Implemented
+        },
     } {  //* Match the result of the CRUD operation
-        Ok(ok) => log::info!("{ok}"),
-        Err(e) => log::error!("{e}"),
-    };
-}
+        Ok(ok) => {
+            log::info!("{}", &ok.as_str());
+            log::trace!("Generating response for {}", url);
+            // println!("File content: {}", std::fs::read_to_string(format!("{}{}", path, filename)).unwrap());
 
+            match url {
+                "/" => generate_response(HttpStatus::_200.message(), HttpStatus::_200),
+                "/about" => generate_response(&ok, HttpStatus::_201),
+                "/contact" => generate_response(&ok, HttpStatus::_501),
 
-// ? Modified functions (to add behavior depending on the URL & request method) -----------------------------------------------
-
-
-/// Handles a service based on the provided URL and generates an appropriate HTTP response.
-///
-/// This function implements a basic routing system where specific URLs are matched to generate custom responses.
-/// It logs debugging information and returns an `HttpResponse` based on the matched URL.
-///
-/// # Arguments
-///
-/// - `url`: The URL to handle.
-///
-/// # Returns
-///
-/// An `HttpResponse` representing the server's response.
-fn handle_service(url: &str) -> HttpResponse { 
-    log::trace!("Generating response for {}", url);
-    match url {
-        "/" => generate_response(HttpStatus::_200.message(), HttpStatus::_200),
-        "/about" => generate_response("Not impl yet", HttpStatus::_501),
-        "/contact" => generate_response("Not impl yet", HttpStatus::_501),
-        // ^ Add more routes here...
-        _ => generate_response("Unknown Service", HttpStatus::_404),
-    }    
+                // ^ Add more routes here...
+                _ => generate_response("Unknown Service", HttpStatus::_503),  // 503 Service Unavailable
+            }
+        },
+        Err(e) => {
+            log::error!("{}", &e);
+            generate_response(&e.to_string(), HttpStatus::_502)  // 502 Bad Gateway
+        },
+    }
 }
 
 
