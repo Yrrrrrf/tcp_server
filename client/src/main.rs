@@ -37,19 +37,21 @@ fn main() {
     log::info!("Starting client to {}\n", server_address);
 
     match TcpStream::connect(server_address) {
-        Ok(mut stream) => {
+        Ok(mut stream) => {  // If the connection is successful
             let request = HttpRequest::new(
-                // HttpMethod::GET, 
-                HttpMethod::POST, 
+                // HttpMethod::POST, 
+                // HttpMethod::GET,
+                HttpMethod::PUT,
+                // HttpMethod::DELETE, 
                 HttpVersion::Http1_1,
                 // "/",
                 "/about",
                 // "yes",
-                "Hello, Rust!".to_string()
+                "Hello, Rust!",
             );
-            // let request = "GET / HTTP/1.1".to_string();  // Valid HTTP request
-            // let request = "GET / HTTP/2.4".to_string();  // Invalid HTTP version (505)
-            // let request = "GET /fiveOfive.html HTTP/1.1".to_string();  // Not Implemented (501)
+            // let request = "GET / HTTP/1.1";  // Valid HTTP request
+            // let request = "GET / HTTP/2.4";  // Invalid HTTP version (505)
+            // let request = "GET /fiveOfive.html HTTP/1.1";  // Not Implemented (501)
 
             stream.write(request.to_string().as_bytes()).unwrap();
 
