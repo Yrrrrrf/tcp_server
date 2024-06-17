@@ -10,6 +10,8 @@ It allows a client to connect to it and send a message. The server will then pri
 The main purpose of this project is to learn how to create a TCP server in Rust without using any external crates. **Only the Rust standard library is used**.
 
 ## Setup
+
+### Prerequisites
 - Check the [`Cargo.toml`](./Cargo.toml) file to see the dependencies.
 ```toml
 [dependencies]
@@ -22,13 +24,12 @@ dev_utils = "0.*"  # most recent version
 ip = "127.0.0.1"  # localhost
 port = "8080"  # default port
 ```
-- Use the [`server` main](./server/src/main.rs) to initialize the server.
-- Test the connection with the [`client` main](./client/src/main.rs).
+
+### Running the Project
 - Use `cargo build` to build the project. Then execute these commands to run the server and the client.
 ```bash
-cargo run -p server  # Initialize the server on the specified IP address and port
-cargo run -p client  # Test the connection with the client
-# The clien probably will become a separate project or an struct in the server project
+cargo run --example server  # Initialize the server on the specified IP address and port
+cargo run --example client  # Test the connection with the client
 # Maybe this (all of these) will be abstracted in a module for dev_utils crate
 ```
 
@@ -38,10 +39,10 @@ cargo run -p client  # Test the connection with the client
 - [X] Impl a basic Web Socket Server
   - [X] Logging and Monitoring
   - [X] Connection Establishment between Client and Server
-  - [ ] Add multitreading support 
-  - [ ] Data Serialization
+  - [X] Add multitreading support 
+  - [X] Data Serialization
   - [ ] Message Framing: Establish a protocol for framing messages, so the receiver knows where one message ends and the next one begins. Common techniques include using fixed-length messages or delimiters.
-- [ ] Testing
+- [X] Testing
 
 ## References
 - [TCP Server (TCPListener)](https://doc.rust-lang.org/std/net/struct.TcpListener.html)

@@ -48,40 +48,13 @@ use dev_utils::{
     },
 };
 
-// Internal modules
-mod thread_pool;
-
-// ? Main ---------------------------------------------------------------------------------------------------------------------
-fn main() {
-    print_app_data(file!());  // Read the Cargo.toml file and print the app data (name, version, authors)
-    RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
-
-    // ^ Read the IP address and port from the keys.toml file
-    let keys = TomlFile::new(Path::new("resources/keys/keys.toml"));
-    let section = keys.get_section_data("ip_address");
-    let ip = section.unwrap().get_key_value("ip").unwrap();
-    let port = section.unwrap().get_key_value("port").unwrap();
-
-    let server_address = format!("{}:{}", ip.1, port.1);
-    log::info!("Starting server at {}\n", server_address);
-
-    let pool = thread_pool::ThreadPool::new(8);  // Create a thread pool with 8 threads
-    TcpListener::bind(server_address).expect("Failed to bind to address.").incoming().for_each(|stream| {
-        match stream {
-            Ok(stream) => pool.execute(|| handle_client(stream)),
-            Err(e) => log::error!("Failed to establish a connection: {}", e),
-        }
-    });
-    log::warn!("Shutting down.");  // If the loop ends, print this message (the server is shutting down)
-}
-
 
 /// Handles a client connection by reading the request, checking for favicon requests, and generating a response.
 ///
 /// # Arguments
 ///
 /// - `stream`: The `TcpStream` representing the client connection.
-fn handle_client(mut stream: TcpStream)  {
+pub fn handle_client(mut stream: TcpStream)  {
     // * Buffer reads the data from the stream and stores it in the buffer
     const BUFFER_SIZE: usize = 32;  // 32 KB
     let mut buffer = [0; 1024*BUFFER_SIZE];
@@ -132,7 +105,6 @@ fn handle_client(mut stream: TcpStream)  {
 
 }
 
-
 /// Matches and parses the components of an HTTP request line. Then, it generates an appropriate response.
 ///
 /// This function extracts the HTTP method, URL, and HTTP version from the request line. If any of these
@@ -155,7 +127,6 @@ fn match_request_line(request_line: &String) -> Option<(HttpMethod, &str, HttpVe
         HttpVersion::from_str(parts.next()?)?  // the http_version is a HttpVersion enum
     ))  // return the tuple (method, url, http_version)
 }
-
 
 fn match_method_and_url(method: HttpMethod, url: &str, body: &str)  -> HttpResponse {
     let path = ".\\resources\\temp\\";  // the path where the files will be created
@@ -194,7 +165,6 @@ fn match_method_and_url(method: HttpMethod, url: &str, body: &str)  -> HttpRespo
         },
     }
 }
-
 
 /// Generates an HTTP response for a given message and status code.
 ///

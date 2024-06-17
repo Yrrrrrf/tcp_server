@@ -1,5 +1,19 @@
 //! # TCP Client
 //! 
+//! This module defines a simple TCP client that sends an HTTP request to a server and receives a response.
+//! 
+//! ## Features
+//! 
+//! - Connects to a server using a TCP stream.
+//! - Sends an HTTP request to the server.
+//! - Receives an HTTP response from the server.
+//! - Parses the response and handles the response headers and body.
+//! 
+//! ## Usage
+//! 
+//! To use this client, simply call the `main` function. The client reads configuration data from
+//! the `resources/keys/keys.toml` file, including the server IP address and port.
+//! 
 #![allow(unused)]
 
 // ? Module imports -----------------------------------------------------------------------------------------------------------
@@ -23,10 +37,11 @@ use dev_utils::{
 
 // ? Main ---------------------------------------------------------------------------------------------------------------------
 fn main() {
-    print_app_data(file!());  // Read the Cargo.toml file and print the app data (name, version, authors)
+    // print_app_data(file!());  // Read the Cargo.toml file and print the app data (name, version, authors)
     RLog::init_logger(LevelFilter::Trace);  // Initialize the logger with the given log level
 
     // ^ Read the IP address and port from the keys.toml file
+
     let keys = TomlFile::new(Path::new("resources/keys/keys.toml"));
     let section = keys.get_section_data("ip_address");
     let ip = section.unwrap().get_key_value("ip").unwrap();
@@ -47,7 +62,7 @@ fn main() {
                 // "/",
                 "/about",
                 // "yes",
-                "Hello, Rust!",
+                "Helasdasdsadasdaslo, Rust!",
             );
             // let request = "GET / HTTP/1.1";  // Valid HTTP request
             // let request = "GET / HTTP/2.4";  // Invalid HTTP version (505)
